@@ -96,7 +96,7 @@ prototype-agent create myapp
 cd myapp
 npm install
 npm run serve
-# 打开 http://localhost:8082/product/demo/pc/index.html
+# 打开 http://127.0.0.1:8082/product/demo/pc/index.html
 ```
 
 首跑就带一个可交互的 demo 产品（客户列表 + 表单 + PRD），照着它加自己的页面即可。

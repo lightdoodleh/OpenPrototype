@@ -635,7 +635,7 @@ server.on('error', (err) => {
 server.listen(PORT, HOST, () => {
   console.log('====================================');
   console.log('prototype-agent-kit 服务器已启动');
-  console.log(`地址: http://localhost:${PORT}`);
+  console.log(`地址: http://127.0.0.1:${PORT}`);
   console.log(`监听: ${HOST}${HOST === '127.0.0.1' ? '（仅本机；局域网演示用 --host 0.0.0.0）' : '（局域网可访问预览；/api/* 写入与 Agent 接口仍仅限本机）'}`);
   console.log(`项目根: ${ROOT_DIR}`);
   console.log(`OpenCode: ${OC.bin || '未检测到（Agent 面板需要它，运行 doctor 查看安装引导）'}`);

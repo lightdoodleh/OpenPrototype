@@ -152,7 +152,7 @@ function cmdCreate(argv) {
   info(C.g('\n✔ 项目已创建。下一步：\n'));
   info(`  cd ${dir}`);
   info('  npm install');
-  info('  npm run serve      ' + C.dim('# 打开 http://localhost:8082/product/demo/pc/index.html'));
+  info('  npm run serve      ' + C.dim('# 打开 http://127.0.0.1:8082/product/demo/pc/index.html'));
   info('\n  ' + C.dim('（右侧 AI 面板需要本机安装 OpenCode，运行 npx prototype-agent doctor 检查）\n'));
 }
 
