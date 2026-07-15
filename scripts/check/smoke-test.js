@@ -21,9 +21,12 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const { spawn, execSync } = require('child_process');
+const { loadConfig } = require('../../lib/config');
 
-const ROOT = path.resolve(__dirname, '..', '..');
-const PORT = 8082;
+const CONFIG = loadConfig();
+const ROOT = CONFIG.rootDir;                                              // 用户项目根（含 proto-kit.config.json）
+const SERVER_JS = path.resolve(__dirname, '..', '..', 'runtime', 'server.js'); // 本包的服务器入口
+const PORT = CONFIG.port;
 const BASE = `http://localhost:${PORT}`;
 const SHOT_DIR = path.join(__dirname, '_screenshots');
 const NON_PAGE_DIRS = new Set(['shared', 'references', 'templates', 'node_modules', '.git', '.claude']);
@@ -77,13 +80,13 @@ function ping() {
 }
 async function ensureServer() {
   if (await ping()) return null; // 已在运行，复用
-  const proc = spawn('node', [path.join(ROOT, 'server.js')], { cwd: ROOT, stdio: 'ignore' });
+  const proc = spawn('node', [SERVER_JS], { cwd: ROOT, stdio: 'ignore' });
   for (let i = 0; i < 40; i++) {
     await new Promise((r) => setTimeout(r, 250));
     if (await ping()) return proc;
   }
   proc.kill();
-  throw new Error(`server.js 未能在端口 ${PORT} 启动`);
+  throw new Error(`服务器未能在端口 ${PORT} 启动（${SERVER_JS}）`);
 }
 
 function urlFor(file, query = '') {

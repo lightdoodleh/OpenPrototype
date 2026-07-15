@@ -17,8 +17,9 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { loadConfig } = require('../../lib/config');
 
-const ROOT = path.resolve(__dirname, '..', '..');
+const ROOT = loadConfig().rootDir;
 
 // 脚本加载顺序铁律（AGENTS.md §2.4），只校验出现的核心文件的相对先后
 const SCRIPT_ORDER = [
