@@ -78,7 +78,7 @@
 ### 场景 ①：从零建项目
 
 ```bash
-npx prototype-agent-kit create myapp   # 首次用包名调用；装完依赖后可用短名 npx prototype-agent
+npx prototype-agent create myapp
 cd myapp
 npm install
 npm run serve
