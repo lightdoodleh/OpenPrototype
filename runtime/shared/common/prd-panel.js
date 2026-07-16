@@ -3,11 +3,31 @@
  * 管理 PRD 文档的加载、渲染和交互
  */
 
+// 页面可在引入本模块前声明这三个全局以覆盖默认行为；未声明时使用默认值。
+var PRD_BASE_PATH = typeof PRD_BASE_PATH !== 'undefined' ? PRD_BASE_PATH : './';
+var PRD_FILE_MAP = typeof PRD_FILE_MAP !== 'undefined' ? PRD_FILE_MAP : {};
+var PRD_CACHE = typeof PRD_CACHE !== 'undefined' ? PRD_CACHE : {};
+
 var prdPanelInitialized = false;
 var prdPanelWidth = null;
 var PRD_PANEL_DEFAULT_WIDTH = 680;
 var PRD_PANEL_MIN_WIDTH = 360;
 var PRD_PANEL_MAX_RATIO = 0.86;
+
+// 记录本文件自身的 <script src>，用于定位同目录的 prd-panel.css 并自动注入
+var PRD_PANEL_SCRIPT_SRC = document.currentScript ? document.currentScript.getAttribute('src') : '';
+
+function ensurePrdPanelStyles() {
+    if (document.getElementById('prdPanelStyles')) return;
+    var href = PRD_PANEL_SCRIPT_SRC
+        ? PRD_PANEL_SCRIPT_SRC.replace(/prd-panel\.js(?:\?.*)?$/, 'prd-panel.css')
+        : 'common/prd-panel.css';
+    var link = document.createElement('link');
+    link.id = 'prdPanelStyles';
+    link.rel = 'stylesheet';
+    link.href = href;
+    document.head.appendChild(link);
+}
 
 function getPrdPanelMaxWidth() {
     return Math.floor(window.innerWidth * PRD_PANEL_MAX_RATIO);
@@ -84,6 +104,8 @@ function ensurePrdPanelStructure(prdPanel) {
 
 function ensurePrdPanelDom() {
     if (!document.body) return null;
+
+    ensurePrdPanelStyles();
 
     var prdFloatBtn = document.getElementById('prdFloatBtn');
     if (!prdFloatBtn) {
