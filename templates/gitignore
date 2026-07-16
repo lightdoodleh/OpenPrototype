@@ -4,7 +4,9 @@ node_modules/
 .vscode/
 .claude/
 .codex/
+.trae/
 .opencode/
 .playwright-cli/
 scripts/check/_screenshots/
 *.log
+npm-debug.log*
