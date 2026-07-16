@@ -17,8 +17,30 @@ var PRD_PANEL_MAX_RATIO = 0.86;
 // 记录本文件自身的 <script src>，用于定位同目录的 prd-panel.css 并自动注入
 var PRD_PANEL_SCRIPT_SRC = document.currentScript ? document.currentScript.getAttribute('src') : '';
 
+function arePrdPanelStylesReady() {
+    var link = document.getElementById('prdPanelStyles');
+    return !!(link && link.sheet);
+}
+
+function revealPrdPanelDom() {
+    ['prdFloatBtn', 'prdPanel'].forEach(function(id) {
+        var element = document.getElementById(id);
+        if (element && element.dataset.prdPanelPending === 'true') {
+            element.style.visibility = '';
+            delete element.dataset.prdPanelPending;
+        }
+    });
+}
+
+function hidePrdPanelUntilStylesReady(element) {
+    if (!element || arePrdPanelStylesReady()) return;
+    element.dataset.prdPanelPending = 'true';
+    element.style.visibility = 'hidden';
+}
+
 function ensurePrdPanelStyles() {
-    if (document.getElementById('prdPanelStyles')) return;
+    var existingLink = document.getElementById('prdPanelStyles');
+    if (existingLink) return existingLink;
     var href = PRD_PANEL_SCRIPT_SRC
         ? PRD_PANEL_SCRIPT_SRC.replace(/prd-panel\.js(?:\?.*)?$/, 'prd-panel.css')
         : 'common/prd-panel.css';
@@ -26,7 +48,9 @@ function ensurePrdPanelStyles() {
     link.id = 'prdPanelStyles';
     link.rel = 'stylesheet';
     link.href = href;
+    link.addEventListener('load', revealPrdPanelDom);
     document.head.appendChild(link);
+    return link;
 }
 
 function getPrdPanelMaxWidth() {
@@ -113,12 +137,14 @@ function ensurePrdPanelDom() {
         prdFloatBtn.id = 'prdFloatBtn';
         prdFloatBtn.className = 'prd-float-btn';
         prdFloatBtn.textContent = 'PRD';
+        hidePrdPanelUntilStylesReady(prdFloatBtn);
         document.body.appendChild(prdFloatBtn);
     }
 
     var prdPanel = document.getElementById('prdPanel');
     if (!prdPanel) {
         prdPanel = document.createElement('div');
+        hidePrdPanelUntilStylesReady(prdPanel);
         document.body.appendChild(prdPanel);
     }
 
