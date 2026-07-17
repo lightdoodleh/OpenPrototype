@@ -918,7 +918,7 @@ function applyPrdRedColor() {
 
 function wrapPrdSelectionWithRed(text) {
     if (!isPrdMarkdownTableSelection(text)) {
-        return '<span style="color:#e53935">' + text + '</span>';
+        return '<span style="color:red">' + text + '</span>';
     }
 
     return text.split('\n').map(function(line) {
@@ -956,7 +956,7 @@ function wrapPrdMarkdownTableRowCells(line) {
         if (!content || /<span\b[^>]*\bstyle\s*=\s*["'][^"']*\bcolor\s*:\s*(?:#e53935|red)\b[^"']*["'][^>]*>[\s\S]*<\/span>/i.test(content)) {
             return cell;
         }
-        return left + '<span style="color:#e53935">' + content + '</span>' + right;
+        return left + '<span style="color:red">' + content + '</span>' + right;
     }).join('|') + '|' + trailing;
 }
 
