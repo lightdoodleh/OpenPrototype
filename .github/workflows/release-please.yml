@@ -3,6 +3,13 @@ name: Release Please
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 要补发的 Release tag（必须与 package.json 版本一致）
+        required: true
+        default: v1.0.0
+        type: string
 
 permissions:
   contents: read
@@ -13,6 +20,7 @@ concurrency:
 
 jobs:
   verify:
+    if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -50,6 +58,7 @@ jobs:
           node bin/cli.js --help
 
   smoke:
+    if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -71,6 +80,7 @@ jobs:
           if-no-files-found: ignore
 
   release:
+    if: ${{ github.event_name == 'push' }}
     needs: [verify, smoke]
     runs-on: ubuntu-latest
     permissions:
@@ -85,6 +95,8 @@ jobs:
           release-type: node
       - uses: actions/checkout@v6
         if: ${{ steps.release.outputs.release_created }}
+        with:
+          ref: ${{ steps.release.outputs.tag_name }}
       - uses: actions/setup-node@v6
         if: ${{ steps.release.outputs.release_created }}
         with:
@@ -107,4 +119,40 @@ jobs:
           fi
       - name: 发布 npm 包（Trusted Publishing）
         if: ${{ steps.release.outputs.release_created }}
+        run: npm publish --provenance
+
+  recover-publish:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.14.0
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: 安装 Trusted Publishing 所需的 npm 版本
+        run: npm install --global npm@11.5.1
+      - run: npm ci
+      - name: 校验补发 tag 与包版本
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          package_name=$(node -p "require('./package.json').name")
+          package_version=$(node -p "require('./package.json').version")
+          expected_tag="v$package_version"
+          if [ "$RELEASE_TAG" != "$expected_tag" ]; then
+            echo "::error::补发 tag $RELEASE_TAG 与 $package_name@$package_version 不一致，预期 $expected_tag"
+            exit 1
+          fi
+          if npm view "$package_name@$package_version" version > /dev/null 2>&1; then
+            echo "::error::npm 上已存在 $package_name@$package_version，不能覆盖发布"
+            exit 1
+          fi
+      - name: 补发 npm 包（Trusted Publishing）
         run: npm publish --provenance
