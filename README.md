@@ -2,9 +2,11 @@
 
 # OpenPrototype
 
-**本地原型工作台 —— 左侧树形导航 · 中间原型预览 · 右侧 AI Agent**
+**English** | [简体中文](README.zh-CN.md)
 
-让产品经理把「需求 → PRD → HTML 原型」跑成一个闭环，AI 就坐在原型旁边按 PRD 改页面。
+**A local prototyping workbench — navigation tree on the left · live preview in the middle · an AI Agent on the right**
+
+Let product managers run "requirements → PRD → HTML prototype" as a single closed loop, with the AI sitting right next to the prototype and editing pages against their PRD.
 
 *A local prototyping workbench: navigation tree · live preview · an AI agent that edits your HTML prototypes against their PRD.*
 
@@ -16,175 +18,175 @@
 </div>
 
 <p align="center">
-  <img src="image/README/workbench-overview.png" alt="openprototype 工作台预览" width="1100">
+  <img src="image/README/workbench-overview.png" alt="openprototype workbench preview" width="1100">
 </p>
 
 ---
 
-## 为什么要有它
+## Why it exists
 
-产品经理做原型时的老问题：
+The recurring pain points when a PM builds prototypes:
 
-- **PRD 和原型两张皮** —— 文档在 Word / Axure，原型在另一处，改一个字段要手动同步好几处，越改越对不上。
-- **AI 会写代码，但不懂你的规矩** —— 直接让通用 AI 改原型，它会整页重写、命名混乱、把状态文案写死、破坏既有交互。
-- **评审时页面散落各处** —— 几十个原型页没有统一入口，找页面、对版本靠记忆。
+- **PRD and prototype live apart** — the doc is in Word / Axure, the prototype is somewhere else. Changing one field means manually syncing several places, and they drift further apart the more you edit.
+- **AI can write code, but doesn't know your rules** — hand a prototype to a general-purpose AI and it rewrites whole pages, names things inconsistently, hardcodes status labels, and breaks existing interactions.
+- **Pages are scattered at review time** — dozens of prototype pages with no unified entry point; you find pages and track versions from memory.
 
-`openprototype` 把这三件事收进**一个本地工作台**：
+`openprototype` folds these three things into **one local workbench**:
 
-1. **PRD（`.md`）和原型（`.html`）同目录并排放**，一处浏览、一处对齐。
-2. **右侧 AI Agent 自动携带「当前页面 + 当前 PRD」上下文**，你说"把某字段改成 XX"，它只改相关部分、不整页重写；还能识别 PRD 里**标红**的增量改动精准落地。
-3. **内置红线检查器**（脚本顺序、数据层、状态常量化、字体栈、`mode=view` 物理隐藏）在每次改动后自动跑，AI 产出想跑偏都难。
+1. **PRD (`.md`) and prototype (`.html`) sit side by side in the same directory** — browse in one place, keep them aligned in one place.
+2. **The AI Agent on the right automatically carries "current page + current PRD" context.** Say "change field X to XX" and it edits only the relevant part instead of rewriting the whole page; it can also pick up the **red-marked** incremental changes in the PRD and land them precisely.
+3. **A built-in red-line checker** (script order, data layer, status constants, font stack, `mode=view` physical hiding) runs automatically after every change, making it hard for the AI's output to drift off-spec.
 
-> 一句话：**给"PM + AI 做原型"这件事，配一套有护栏的本地工作台。**
-
----
-
-## ✨ 特性
-
-- 🌲 **树形导航** —— 扫描产品目录自动生成页面树，支持标题模糊搜索、版本号徽标（从 PRD 版本表读取）、审核标记。
-- 👁 **即时预览** —— 中间 iframe 直接渲染原型页面，点左侧即看。
-- 🤖 **上下文感知的 AI Agent** —— 接本机 [OpenCode](https://opencode.ai)，每条消息自动带当前页面 + PRD 路径；一键"按 PRD 标红内容更新页面"。
-- 🧱 **零后端的数据层** —— `BaseDataManager` 用 localStorage 做 CRUD，原型自带可交互假数据，不用起数据库。
-- ✅ **自动化红线检查** —— 静态规则 + Playwright 冒烟，改完即测，把 AI 拉回规范。
-- 📦 **脚手架分发** —— `create` 从零起项目、`init` 植入已有项目、`add-product` 加产品，`npm update` 升级框架。
-- 🖥 **跨平台** —— macOS / Windows / Linux；OpenCode 路径自动探测。
+> In one sentence: **a local workbench with guardrails, built for "PM + AI prototyping."**
 
 ---
 
-## 🎯 适合谁 / 使用场景
+## ✨ Features
 
-**适合**
-- **B 端 / 中后台产品经理**：需要快速做高保真、可交互原型，并让 PRD 与原型始终一致。
-- **小团队 / 独立开发**：想用 AI 加速原型迭代，又不希望 AI 每次乱改、风格漂移。
-- **需要沉淀规范的团队**：把自己的 PRD 模板、UI 规范放进 `rules/`，让 AI 按你的标准产出。
-
-**典型场景**
-| 场景 | 怎么用 |
-|------|--------|
-| 从需求快速出原型 | 写 PRD → 让 Agent 按 PRD 生成/补页面 → 预览调试 |
-| 按 PRD 增量改原型 | 在 PRD 里把要改的地方**标红** → 点「按 PRD 标红内容更新页面」→ Agent 只改这部分 |
-| 保持 PRD 与原型一致 | 任何字段/规则改动，Agent 同步改页面 + PRD + 假数据 |
-| 需求评审 | 树形导航一处浏览所有页面，版本徽标一眼看齐版本 |
-| 团队规范落地 | 规范写进 `rules/` + `CONVENTIONS.md`，检查器强制红线 |
-
-**不适合**：写生产后端代码、数据库设计、正式前端工程（它是"原型 + PRD"阶段的工具，不是交付脚手架）。
+- 🌲 **Navigation tree** — scans the product directory to auto-generate a page tree, with fuzzy title search, version badges (read from the PRD version table), and review markers.
+- 👁 **Live preview** — the middle iframe renders the prototype page directly; click on the left and see it instantly.
+- 🤖 **Context-aware AI Agent** — connects to your local [OpenCode](https://opencode.ai); every message automatically carries the current page + PRD path, with one-click "update the page per the PRD's red-marked content."
+- 🧱 **Zero-backend data layer** — `BaseDataManager` does CRUD via localStorage, so prototypes ship with interactive fake data and no database to spin up.
+- ✅ **Automated red-line checks** — static rules + Playwright smoke tests run right after you edit, pulling the AI back to spec.
+- 📦 **Scaffold distribution** — `create` starts a project from scratch, `init` grafts it into an existing project, `add-product` adds a product, and `npm update` upgrades the framework.
+- 🖥 **Cross-platform** — macOS / Windows / Linux; the OpenCode path is auto-detected.
 
 ---
 
-## 🚀 快速开始
+## 🎯 Who it's for / Use cases
 
-> 前置：Node ≥ 16。AI 面板另需本机 [OpenCode](https://opencode.ai)（见下节，可后装）。
+**A good fit for**
+- **B2B / back-office product managers**: need to quickly build high-fidelity, interactive prototypes and keep the PRD and prototype always in sync.
+- **Small teams / solo developers**: want AI to speed up prototype iteration without letting it rewrite things randomly or drift in style.
+- **Teams that want to codify their standards**: put your own PRD templates and UI guidelines into `rules/` and have the AI produce work to your standard.
 
-### 场景 ①：从零建项目
+**Typical scenarios**
+| Scenario | How to use it |
+|----------|---------------|
+| Go from requirements to prototype quickly | Write the PRD → have the Agent generate/fill in pages per the PRD → preview and debug |
+| Incrementally edit a prototype per the PRD | **Red-mark** the parts to change in the PRD → click "Update page per PRD red-marked content" → the Agent edits only that part |
+| Keep PRD and prototype consistent | For any field/rule change, the Agent updates the page + PRD + fake data together |
+| Requirement review | Browse all pages in one place via the navigation tree; version badges make versions align at a glance |
+| Roll out team standards | Write standards into `rules/` + `CONVENTIONS.md`; the checker enforces the red lines |
+
+**Not a fit for**: writing production backend code, database design, or formal frontend engineering (this is a tool for the "prototype + PRD" phase, not a delivery scaffold).
+
+---
+
+## 🚀 Quick start
+
+> Prerequisite: Node ≥ 16. The AI panel additionally needs local [OpenCode](https://opencode.ai) (see the next section; can be installed later).
+
+### Scenario ①: Start a project from scratch
 
 ```bash
 npx openprototype create myapp
 cd myapp
 npm install
 npm run serve
-# 打开 http://127.0.0.1:8082/product/demo/pc/index.html
+# Open http://127.0.0.1:8082/product/demo/pc/index.html
 ```
 
-首跑就带一个可交互的 demo 产品（客户列表 + 表单 + PRD），照着它加自己的页面即可。
+The first run ships with an interactive demo product (customer list + form + PRD); just follow it to add your own pages.
 
-### 场景 ②：植入已有项目（非破坏式）
+### Scenario ②: Graft into an existing project (non-destructive)
 
 ```bash
-cd 你的项目
+cd your-project
 npm i openprototype
-npx openprototype init          # 只补缺失文件、合并 package.json 脚本，不覆盖你已有内容
+npx openprototype init          # Only adds missing files and merges package.json scripts; never overwrites your existing content
 npx openprototype add-product shop
 npm run serve
 ```
 
 ---
 
-## 🤖 AI Agent 怎么工作
+## 🤖 How the AI Agent works
 
-右侧面板本质是**你项目里本机 OpenCode 的一个上下文感知外壳**：
+The right-hand panel is essentially **a context-aware shell around the local OpenCode inside your project**:
 
 ```
-你在面板输入  ──▶  本地 server (/api/agent)  ──▶  OpenCode (127.0.0.1)
-     ▲                    │  自动注入：当前页面路径 + 当前 PRD 路径 + 页面红线约定
-     └──── SSE 流式回显 ◀──┘  Agent 改完文件后预览自动刷新
+You type in the panel  ──▶  local server (/api/agent)  ──▶  OpenCode (127.0.0.1)
+     ▲                          │  Auto-injects: current page path + current PRD path + page red-line conventions
+     └──── SSE streaming echo ◀─┘  After the Agent edits files, the preview refreshes automatically
 ```
 
-- **自动带上下文**：点左侧任一页面，面板顶部就显示「本条消息将携带：页面 X / PRD Y」，无需你手动贴路径。
-- **按 PRD 标红增量更新**：一键把 PRD 里 `<span style="color:red">…</span>` 标红的内容作为**唯一改动范围**发给 Agent —— 只改标红处，未标红的历史内容当背景，不重写、不"顺手优化"。
-- **本机私有**：服务器默认只监听 `127.0.0.1`；所有写入与 Agent 接口（`/api/*`）只接受本机请求——即使你用 `--host 0.0.0.0` 把预览开放给局域网同事，别人也只能看页面，改不了文件、动不了 Agent。
+- **Context carried automatically**: click any page on the left and the top of the panel shows "This message will carry: page X / PRD Y" — no need to paste paths manually.
+- **Incremental update per PRD red-marks**: one click sends the PRD content marked `<span style="color:red">…</span>` as the **only edit scope** to the Agent — it edits only the red-marked parts, treats un-marked history as background, and won't rewrite or "optimize on the side."
+- **Local and private**: the server listens on `127.0.0.1` by default; all writes and the Agent interface (`/api/*`) accept local requests only — even if you open the preview to the LAN with `--host 0.0.0.0`, others can only view pages, not edit files or touch the Agent.
 
-### 安装 OpenCode（AI 面板前置）
+### Install OpenCode (prerequisite for the AI panel)
 
 ```bash
-npx openprototype doctor    # 一键体检 Node / OpenCode / 配置 / Playwright
+npx openprototype doctor    # One-shot check of Node / OpenCode / config / Playwright
 ```
 
-- 安装见 https://opencode.ai ；装好后确认在 PATH：`which opencode`（Windows：`where opencode`）。
-- 模型 / API key 由 OpenCode 自己管理（`opencode auth`），本工具只转发消息。
-- 路径不在 PATH：在 `proto-kit.config.json` 的 `opencode.bin` 写绝对路径。
+- For installation see https://opencode.ai; once installed, confirm it's on PATH: `which opencode` (Windows: `where opencode`).
+- Models / API keys are managed by OpenCode itself (`opencode auth`); this tool only forwards messages.
+- Not on PATH: write the absolute path in `opencode.bin` in `proto-kit.config.json`.
 
-**没装 OpenCode 也能用** —— 导航 + 原型预览正常，只是右侧面板不可用。
+**Usable without OpenCode too** — navigation + prototype preview work normally; only the right-hand panel is unavailable.
 
 ---
 
-## 🗂 目录结构与三层分离
+## 🗂 Directory structure and the three-layer separation
 
 ```
-你的项目/
-├─ proto-kit.config.json     # 端口 / OpenCode / 产品列表（唯一配置入口）
-├─ AGENTS.md                 # 给 AI 的协作规范（通用模板，你拥有可改）
-├─ CONVENTIONS.md            # 检查器强制的页面红线说明（和运行时耦合）
-├─ skills/                   # xiaojia（编码克制）+ auto-test（改完自动跑检查）
-├─ rules/                    # 空目录：放你团队自己的 PRD 模板 / UI 规范
+your-project/
+├─ proto-kit.config.json     # Ports / OpenCode / product list (the single config entry)
+├─ AGENTS.md                 # Collaboration conventions for the AI (a generic template you own and can edit)
+├─ CONVENTIONS.md            # Explanation of the page red lines the checker enforces (coupled to the runtime)
+├─ skills/                   # xiaojia (restrained editing) + auto-test (auto-run checks after editing)
+├─ rules/                    # Empty directory: put your team's own PRD templates / UI guidelines here
 └─ product/<id>/pc/
-   ├─ index.html             # 导航壳（薄，引用 /_kit 运行时）
-   ├─ nav-tree.json          # 页面清单（nav:sync 自动生成）
-   └─ …你的原型页面与 PRD.md
+   ├─ index.html             # Navigation shell (thin, references the /_kit runtime)
+   ├─ nav-tree.json          # Page manifest (auto-generated by nav:sync)
+   └─ …your prototype pages and PRD.md
 ```
 
-三层分离决定了**谁负责更新**，这也是干净升级的关键：
+The three-layer separation determines **who is responsible for updates**, which is also the key to clean upgrades:
 
-| 层 | 内容 | 归属 | 更新方式 |
-|----|------|------|----------|
-| **运行时** | 服务器 / shared 引擎 / Agent 面板 / 检查脚本 | 框架（挂在 `/_kit/`） | `npm update` 一键升 |
-| **可编辑资产** | `AGENTS.md` `CONVENTIONS.md` `skills/` + 你自建的 `rules/` | 你拥有 | `openprototype update` 对比后按需合并 |
-| **业务内容** | 你的产品 PRD / 原型 / 数据 | 你拥有 | 你自己维护 |
+| Layer | Content | Ownership | Update method |
+|-------|---------|-----------|---------------|
+| **Runtime** | Server / shared engine / Agent panel / check scripts | Framework (mounted at `/_kit/`) | `npm update`, one command |
+| **Editable assets** | `AGENTS.md` `CONVENTIONS.md` `skills/` + your own `rules/` | You own them | `openprototype update` compares and merges as needed |
+| **Business content** | Your product PRDs / prototypes / data | You own them | You maintain them yourself |
 
-> 框架只带**最小通用规范**（页面红线 + 编码克制）。PRD 模板、UI 规范、业务术语这类**方法论属于你**，放进 `rules/` 与 `product/<id>/`，不随框架分发、也不被升级覆盖。
+> The framework ships only the **minimal generic conventions** (page red lines + editing restraint). Methodology like PRD templates, UI guidelines, and business terminology **belongs to you** — put it in `rules/` and `product/<id>/`; it's not distributed with the framework and won't be overwritten on upgrade.
 
-**引擎回退解析**：页面用相对路径引用 `../shared/xxx.js` 时，若 `product/<id>/shared/` 下没有该文件，服务器自动回退到框架内置引擎（等价 `/_kit/shared/`）。因此：
+**Engine fallback resolution**: when a page references `../shared/xxx.js` by relative path and that file doesn't exist under `product/<id>/shared/`, the server automatically falls back to the framework's built-in engine (equivalent to `/_kit/shared/`). Therefore:
 
-- 通用引擎（`base-manager.js`、`common/*`、`styles.css`）**不必复制进产品目录**，升级框架即升级引擎；
-- 产品目录只放自己的**业务组件与常量**（`shared/components/`、`shared/constants/`）和设计资源——这两个目录**永不回退**，缺失时直接 404 暴露问题，不会被框架的通用版静默顶替；
-- 同名文件**本地优先**——从旧项目迁移时，可以按文件保留本地旧版逐步切换。
+- Generic engines (`base-manager.js`, `common/*`, `styles.css`) **don't need to be copied into the product directory** — upgrading the framework upgrades the engine;
+- The product directory holds only its own **business components and constants** (`shared/components/`, `shared/constants/`) and design assets — these two directories **never fall back**; if missing they 404 to expose the problem instead of being silently replaced by the framework's generic version;
+- For same-named files, **local wins** — when migrating from an old project, you can keep the old local version file by file and switch over gradually.
 
 ---
 
-## 🧪 质量保障：红线检查器
+## 🧪 Quality assurance: the red-line checker
 
-`openprototype check` 会强制这些页面红线（详见 [CONVENTIONS.md](templates/CONVENTIONS.md)）：
+`openprototype check` enforces these page red lines (see [CONVENTIONS.md](templates/CONVENTIONS.md) for details):
 
-- 脚本加载顺序固定 · 数据必须走 `BaseDataManager`（禁页面级 localStorage）
-- 状态文案常量化（禁硬编码 `<option>`）· 禁 Google Fonts（系统字体栈）
-- `?mode=view` 物理隐藏（`display:none`，非 `disabled`）· 打开页面无 console 报错
+- Fixed script load order · data must go through `BaseDataManager` (no page-level localStorage)
+- Status labels as constants (no hardcoded `<option>`) · no Google Fonts (system font stack)
+- `?mode=view` physical hiding (`display:none`, not `disabled`) · no console errors when opening a page
 
 ```bash
-openprototype check            # 扫全部页面
-openprototype check --changed  # 只扫 git 改动
+openprototype check            # Scan all pages
+openprototype check --changed  # Scan only git changes
 ```
 
-配套的 `auto-test` skill 会提醒 AI：**每次改完原型自动跑检查、修完 ERROR 再交付。**
+The companion `auto-test` skill reminds the AI: **run the checks automatically after every prototype edit, and fix ERRORs before delivering.**
 
 ---
 
-## ⚙️ 配置 `proto-kit.config.json`
+## ⚙️ Config `proto-kit.config.json`
 
 ```json
 {
   "port": 8082,
-  "host": "127.0.0.1",                     // 默认仅本机；'0.0.0.0' 可让局域网看预览（/api/* 仍仅限本机）
+  "host": "127.0.0.1",                     // Local-only by default; '0.0.0.0' lets the LAN see the preview (/api/* stays local-only)
   "opencode": {
-    "bin": "auto",                       // 'auto' 自动探测；也可写绝对路径
+    "bin": "auto",                       // 'auto' auto-detects; you can also write an absolute path
     "model": "deepseek/deepseek-v4-flash",
     "agent": "build",
     "host": "127.0.0.1",
@@ -196,44 +198,44 @@ openprototype check --changed  # 只扫 git 改动
 }
 ```
 
-环境变量可临时覆盖：`PROTO_KIT_PORT` · `PROTO_KIT_HOST` · `OPENCODE_BIN` · `OPENCODE_MODEL` · `OPENCODE_PORT`。
-也可用 `node runtime/server.js --port 9000 --host 0.0.0.0` 临时指定端口 / 监听地址。
+Environment variables can override temporarily: `PROTO_KIT_PORT` · `PROTO_KIT_HOST` · `OPENCODE_BIN` · `OPENCODE_MODEL` · `OPENCODE_PORT`.
+You can also use `node runtime/server.js --port 9000 --host 0.0.0.0` to specify the port / listen address ad hoc.
 
 ---
 
-## 📟 命令
+## 📟 Commands
 
-| 命令 | 作用 |
-|------|------|
-| `openprototype create <dir>` | 从零创建新项目（含可运行 demo） |
-| `openprototype init` | 把框架植入当前已有项目（非破坏式） |
-| `openprototype add-product <id>` | 新增一个产品壳（默认 pc） |
-| `openprototype serve` | 启动本地服务器 |
-| `openprototype check [--changed]` | 自动化检查（静态红线 + 冒烟） |
-| `openprototype nav:sync` | 扫描产品目录重建 `nav-tree.json` |
-| `openprototype doctor` | 体检（Node / OpenCode / 配置 / Playwright） |
-| `openprototype update` | 如何更新框架 |
+| Command | Purpose |
+|---------|---------|
+| `openprototype create <dir>` | Create a new project from scratch (with a runnable demo) |
+| `openprototype init` | Graft the framework into the current existing project (non-destructive) |
+| `openprototype add-product <id>` | Add a product shell (pc by default) |
+| `openprototype serve` | Start the local server |
+| `openprototype check [--changed]` | Automated checks (static red lines + smoke tests) |
+| `openprototype nav:sync` | Scan the product directory and rebuild `nav-tree.json` |
+| `openprototype doctor` | Health check (Node / OpenCode / config / Playwright) |
+| `openprototype update` | How to update the framework |
 
 ---
 
 ## 🛣 Roadmap
 
-- [ ] **PageShell**：把完整页面壳（顶栏 + 菜单 + 设计系统）抽成产品无关组件，让 list/form/detail/approval 页面模板开箱即用（当前 demo 用自包含示例页）。
-- [ ] **H5 端**：`add-product --h5` 移动端支持。
-- [ ] 一键发布 / 剥离本地开发面板的 `publish` 命令（跨平台）。
-- [ ] 更多示例产品与页面模板。
+- [ ] **PageShell**: extract the full page shell (top bar + menu + design system) into a product-agnostic component so list/form/detail/approval page templates work out of the box (the current demo uses self-contained example pages).
+- [ ] **H5 (mobile)**: `add-product --h5` mobile support.
+- [ ] A `publish` command for one-click publishing / stripping the local dev panel (cross-platform).
+- [ ] More example products and page templates.
 
-欢迎在 Issues 里提需求和反馈。
+Feature requests and feedback are welcome in Issues.
 
 ---
 
-## 🤝 贡献
+## 🤝 Contributing
 
-欢迎 PR。开发约定：
+PRs welcome. Development conventions:
 
-- 只用 Node 内置模块，运行时零依赖（检查器的 Playwright 是 devDependency）。
-- 改运行时后跑 `npm run check`；改壳 / Agent 面板后本地起服务实测三栏。
-- 保持仓库**无任何私有信息**（公司 / 个人 / 内网地址 / 密钥）。
+- Use only Node built-in modules; the runtime has zero dependencies (the checker's Playwright is a devDependency).
+- Run `npm run check` after changing the runtime; after changing the shell / Agent panel, start the server locally and test the three columns for real.
+- Keep the repository **free of any private information** (company / personal / intranet addresses / secrets).
 
 ## 📄 License
 

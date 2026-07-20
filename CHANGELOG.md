@@ -1,3 +1,25 @@
 # Changelog
 
+## 1.0.0 (2026-07-17)
+
+
+### Features
+
+* add new PRD panel styles and scripts for enhanced functionality ([ebf7b58](https://github.com/lightdoodleh/OpenPrototype/commit/ebf7b58e7e01228c07019c3f0cc8df505222938b))
+* initial prototype-agent-kit — 三栏原型工作台脚手架 ([cb69bdf](https://github.com/lightdoodleh/OpenPrototype/commit/cb69bdfb89a2232af9804e6a84ee98f5d5268817))
+* 产品 shared 引擎回退解析 + Playwright 冒烟 CI + 冒烟测试防呆 ([65da620](https://github.com/lightdoodleh/OpenPrototype/commit/65da6203fc59b5dea6000d1ecd98be79700f9318))
+* 新增 prototype-agent 别名包（转发 CLI，让 npx prototype-agent 从零可用） ([c0206bb](https://github.com/lightdoodleh/OpenPrototype/commit/c0206bb46bd2d002ae1be568e85cb56b4379852a))
+
+
+### Bug Fixes
+
+* **check:** 检查脚本改用 loadConfig 解析项目根，修复冒烟测试服务器入口 ([fe50cd8](https://github.com/lightdoodleh/OpenPrototype/commit/fe50cd897537f6917720756ed0eca85824cfda46))
+* update color styling in PRD panel ([edf65f9](https://github.com/lightdoodleh/OpenPrototype/commit/edf65f9329144117f6fd2617d0c8c260d95f70d0))
+* update color styling in PRD panel ([b498da1](https://github.com/lightdoodleh/OpenPrototype/commit/b498da196b502981a706af06dfe020fd8c08b82a))
+* 引擎回退排除 constants/ 与 components/（业务资产缺失应 404 而非静默顶替） ([d40d790](https://github.com/lightdoodleh/OpenPrototype/commit/d40d790d5c2ff9204f96bebaccaf7cd815171539))
+* 本机 URL 统一用 127.0.0.1，与默认绑定一致 ([3677dc2](https://github.com/lightdoodleh/OpenPrototype/commit/3677dc2226d812e3321ee88a9f0803f631a5be21))
+* 消除切换页面时 PRD 面板的闪烁 ([#4](https://github.com/lightdoodleh/OpenPrototype/issues/4)) ([509670a](https://github.com/lightdoodleh/OpenPrototype/commit/509670a41ec9820190e57990431b6a2a52cecc9d))
+
+## Changelog
+
 All notable changes to this project will be documented in this file.
