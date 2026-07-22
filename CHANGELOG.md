@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/lightdoodleh/OpenPrototype/compare/v1.0.0...v1.0.1) (2026-07-17)
+
+
+### Bug Fixes
+
+* publish npm from release tag ([#7](https://github.com/lightdoodleh/OpenPrototype/issues/7)) ([c894b1f](https://github.com/lightdoodleh/OpenPrototype/commit/c894b1f038b054e8ebdbfe5cd6629ca1fcbd583c))
+
 ## 1.0.0 (2026-07-17)
 
 
