@@ -8,7 +8,9 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const PKG_ROOT = path.resolve(__dirname, '..', '..');
-const NPM = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const NPM_CLI = process.platform === 'win32'
+  ? (process.env.npm_execpath || path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js'))
+  : null;
 
 function run(command, args, cwd, options) {
   const result = spawnSync(command, args, {
@@ -18,10 +20,17 @@ function run(command, args, cwd, options) {
     env: Object.assign({}, process.env, options && options.env),
     timeout: options && options.timeout ? options.timeout : 120000
   });
-  if (result.status !== 0 && !(options && options.allowFailure)) {
-    throw new Error(`${command} ${args.join(' ')} 失败\n${result.stdout || ''}\n${result.stderr || ''}`);
+  if ((result.error || result.status !== 0) && !(options && options.allowFailure)) {
+    const spawnError = result.error ? `\n${result.error.stack || result.error.message}` : '';
+    throw new Error(`${command} ${args.join(' ')} 失败\n${result.stdout || ''}\n${result.stderr || ''}${spawnError}`);
   }
   return result;
+}
+
+function npm(args, cwd, options) {
+  return process.platform === 'win32'
+    ? run(process.execPath, [NPM_CLI, ...args], cwd, options)
+    : run('npm', args, cwd, options);
 }
 
 function freePort() {
@@ -76,7 +85,7 @@ async function main() {
 
   let installed = false;
   try {
-    const packed = run(NPM, ['pack', '--json', '--pack-destination', packDir], PKG_ROOT);
+    const packed = npm(['pack', '--json', '--pack-destination', packDir], PKG_ROOT);
     const packResult = JSON.parse(packed.stdout);
     const packItem = Array.isArray(packResult) ? packResult[0] : (packResult.openprototype || Object.values(packResult)[0]);
     if (!packItem || !packItem.filename) throw new Error(`无法解析 npm pack 输出：${packed.stdout}`);
@@ -99,7 +108,7 @@ async function main() {
       products: []
     }, null, 2) + '\n');
 
-    const installResult = run(NPM, ['install', '--foreground-scripts'], projectRoot, {
+    const installResult = npm(['install', '--foreground-scripts'], projectRoot, {
       env: { OPENPROTOTYPE_SERVICE_AUTO_INSTALL: 'force' }
     });
     process.stdout.write(installResult.stdout || '');
