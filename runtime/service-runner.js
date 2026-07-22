@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const util = require('util');
+const { spawn } = require('child_process');
 
 function argValue(name) {
   const index = process.argv.indexOf(name);
@@ -48,6 +49,18 @@ if (requiredPaths.some((target) => !fs.existsSync(target))) {
 }
 
 let missingChecks = 0;
+let serverChild = null;
+let restartTimer = null;
+let shuttingDown = false;
+
+function stopServerChild() {
+  shuttingDown = true;
+  if (restartTimer) clearTimeout(restartTimer);
+  restartTimer = null;
+  if (serverChild && !serverChild.killed) {
+    try { serverChild.kill(); } catch {}
+  }
+}
 
 const pathTimer = setInterval(() => {
   if (requiredPaths.every((target) => fs.existsSync(target))) {
@@ -57,21 +70,68 @@ const pathTimer = setInterval(() => {
   missingChecks += 1;
   if (missingChecks >= 3) {
     log('连续检测到项目或包路径失效，停止服务。');
+    stopServerChild();
     process.exit(0);
   }
 }, 30000);
 
 process.on('exit', () => {
   clearInterval(pathTimer);
+  if (restartTimer) clearTimeout(restartTimer);
   try { fs.closeSync(logFd); } catch {}
 });
 
+process.on('SIGINT', () => {
+  stopServerChild();
+  process.exit(0);
+});
+process.on('SIGTERM', () => {
+  stopServerChild();
+  process.exit(0);
+});
+
+function startWindowsServer() {
+  if (shuttingDown) return;
+  const env = Object.assign({}, process.env, { OPENPROTOTYPE_SERVICE_ID: manifest.serviceId });
+  const args = [manifest.serverPath, '--root', manifest.projectRoot, '--service-id', manifest.serviceId];
+  log(`启动 openprototype ${manifest.packageVersion}，项目：${manifest.projectRoot}`);
+  serverChild = spawn(manifest.nodePath, args, {
+    cwd: manifest.projectRoot,
+    env,
+    stdio: ['ignore', logFd, logFd],
+    windowsHide: true
+  });
+  serverChild.once('error', (err) => {
+    log(`启动失败：${err.stack || err.message}`);
+    serverChild = null;
+    scheduleWindowsRestart();
+  });
+  serverChild.once('exit', (code, signal) => {
+    serverChild = null;
+    if (shuttingDown) return;
+    log(`服务器进程退出（code=${code}, signal=${signal || 'none'}），2 秒后重启。`);
+    scheduleWindowsRestart();
+  });
+}
+
+function scheduleWindowsRestart() {
+  if (shuttingDown || restartTimer) return;
+  restartTimer = setTimeout(() => {
+    restartTimer = null;
+    startWindowsServer();
+  }, 2000);
+}
+
 try {
   process.chdir(manifest.projectRoot);
-  process.env.OPENPROTOTYPE_SERVICE_ID = manifest.serviceId;
-  process.argv.push('--root', manifest.projectRoot, '--service-id', manifest.serviceId);
-  log(`启动 openprototype ${manifest.packageVersion}，项目：${manifest.projectRoot}`);
-  require(manifest.serverPath);
+  if (process.platform === 'win32') {
+    startWindowsServer();
+  } else {
+    process.env.OPENPROTOTYPE_SERVICE_ID = manifest.serviceId;
+    process.argv.push('--root', manifest.projectRoot, '--service-id', manifest.serviceId);
+    log(`启动 openprototype ${manifest.packageVersion}，项目：${manifest.projectRoot}`);
+    require(manifest.serverPath);
+  }
 } catch (err) {
   log(`启动失败：${err.stack || err.message}`);
   process.exit(1);
