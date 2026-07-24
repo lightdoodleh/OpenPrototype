@@ -11,7 +11,7 @@ Let product managers run "requirements → PRD → HTML prototype" as a single c
 *A local prototyping workbench: navigation tree · live preview · an AI agent that edits your HTML prototypes against their PRD.*
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
-![Node](https://img.shields.io/badge/node-%3E%3D16-brightgreen)
+![Node Core](https://img.shields.io/badge/node_core-%3E%3D16-brightgreen)
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-orange)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)
 
@@ -37,7 +37,7 @@ The recurring pain points when a PM builds prototypes:
 
 1. **PRD (`.md`) and prototype (`.html`) sit side by side in the same directory** — browse in one place, keep them aligned in one place.
 2. **The AI Agent on the right automatically carries "current page + current PRD" context.** Say "change field X to XX" and it edits only the relevant part instead of rewriting the whole page; it can also pick up the **red-marked** incremental changes in the PRD and land them precisely.
-3. **A built-in red-line checker** (script order, data layer, status constants, font stack, `mode=view` physical hiding) runs automatically after every change, making it hard for the AI's output to drift off-spec.
+3. **A built-in red-line checker** covers script order, the data layer, status constants, the font stack, and `mode=view` physical hiding. The companion `auto-test` skill tells the Agent to run it after prototype edits.
 
 > In one sentence: **a local workbench with guardrails, built for "PM + AI prototyping."**
 
@@ -49,9 +49,9 @@ The recurring pain points when a PM builds prototypes:
 - 👁 **Live preview** — the middle iframe renders the prototype page directly; click on the left and see it instantly.
 - 🤖 **Context-aware AI Agent** — connects to your local [OpenCode](https://opencode.ai); every message automatically carries the current page + PRD path, with one-click "update the page per the PRD's red-marked content."
 - 🧱 **Zero-backend data layer** — `BaseDataManager` does CRUD via localStorage, so prototypes ship with interactive fake data and no database to spin up.
-- ✅ **Automated red-line checks** — static rules + Playwright smoke tests run right after you edit, pulling the AI back to spec.
-- 📦 **Scaffold distribution** — `create` starts a project from scratch, `init` grafts it into an existing project, `add-product` adds a product, and `npm update` upgrades the framework.
-- 🖥 **Cross-platform** — macOS / Windows / Linux; the OpenCode path is auto-detected.
+- ✅ **Automated red-line checks** — static rules work out of the box; install Playwright and Chromium to add real-browser smoke tests.
+- 📦 **Scaffold distribution** — `create` starts a project from scratch, `init` grafts it into an existing project, `add-product` adds a product, and `npm update openprototype` upgrades the framework runtime.
+- 🖥 **Cross-platform** — manual serving works on macOS / Windows / Linux; the background service currently supports macOS / Windows only, and the OpenCode path is auto-detected.
 
 ---
 
@@ -77,7 +77,7 @@ The recurring pain points when a PM builds prototypes:
 
 ## 🚀 Quick start
 
-> Prerequisite: Node ≥ 16. The AI panel additionally needs local [OpenCode](https://opencode.ai) (see the next section; can be installed later).
+> Prerequisite: the core runtime needs Node ≥ 16. Use Node ≥ 18 for Playwright smoke tests or repository development. The AI panel additionally needs local [OpenCode](https://opencode.ai) (see below; it can be installed later).
 
 ### Scenario ①: Start a project from scratch
 
@@ -85,21 +85,43 @@ The recurring pain points when a PM builds prototypes:
 npx openprototype create myapp
 cd myapp
 npm install
-npm run serve
 # Open http://127.0.0.1:8082/product/demo/pc/index.html
 ```
 
-The first run ships with an interactive demo product (customer list + form + PRD); just follow it to add your own pages.
+On macOS / Windows, `npm install` registers and starts the project's background service by default. Open the URL above when installation finishes; do not run `npm run serve` as well, or the two processes will compete for the same port. On Linux, when the background service is disabled, or if automatic installation fails, run:
 
-### Scenario ②: Graft into an existing project (non-destructive)
+```bash
+npm run serve
+```
+
+The first run ships with an interactive demo product (customer list + form + PRD); follow it to add your own pages.
+
+### Scenario ②: Graft into an existing project
 
 ```bash
 cd your-project
 npm i openprototype
-npx openprototype init          # Only adds missing files and merges package.json scripts; never overwrites your existing content
+npx openprototype init
 npx openprototype add-product shop
-npm run serve
+# Open http://127.0.0.1:8082/product/shop/pc/index.html
 ```
+
+`init` does not overwrite existing template files. It adds missing assets and merges `package.json` scripts, but it also rewrites `package.json` and, by default, registers and starts an OS background service on macOS / Windows. On Linux or with the service disabled, run `npm run serve` manually. If the background service is already running, run `npx openprototype service restart` after `add-product` so the Agent loads the new product's write scope.
+
+### Background service
+
+The background service keeps the workbench available after login and is registered separately for each project. It currently supports macOS LaunchAgent and Windows Task Scheduler; use `npm run serve` on Linux.
+
+```bash
+npx openprototype service status
+npx openprototype service restart
+npx openprototype service logs
+npx openprototype service uninstall
+```
+
+- To prevent automatic registration, set `OPENPROTOTYPE_SERVICE_AUTO_INSTALL=0` before the first `npm install` / `init`, or set `"service": { "autoInstall": false }` in the config beforehand.
+- `service stop` stops the current process only; it will start again at the next login. Use `service uninstall` to remove it permanently.
+- After adding a product or changing the port or Node path, run `service restart` to load the new configuration. Run it after a package upgrade too if the install hook did not restart the service successfully.
 
 ---
 
@@ -115,7 +137,8 @@ You type in the panel  ──▶  local server (/api/agent)  ──▶  OpenCode
 
 - **Context carried automatically**: click any page on the left and the top of the panel shows "This message will carry: page X / PRD Y" — no need to paste paths manually.
 - **Incremental update per PRD red-marks**: one click sends the PRD content marked `<span style="color:red">…</span>` as the **only edit scope** to the Agent — it edits only the red-marked parts, treats un-marked history as background, and won't rewrite or "optimize on the side."
-- **Local and private**: the server listens on `127.0.0.1` by default; all writes and the Agent interface (`/api/*`) accept local requests only — even if you open the preview to the LAN with `--host 0.0.0.0`, others can only view pages, not edit files or touch the Agent.
+- **Local by default**: the server listens on `127.0.0.1` by default; all writes and the Agent interface (`/api/*`) accept local requests only.
+- **LAN exposure boundary**: with `--host 0.0.0.0`, LAN clients still cannot call write or Agent endpoints, but they can read non-hidden files that the static server can reach under the project root—not only prototype pages. Use this only on a trusted network and in a dedicated prototype project with no secrets or other sensitive files.
 
 ### Install OpenCode (prerequisite for the AI panel)
 
@@ -138,7 +161,7 @@ your-project/
 ├─ proto-kit.config.json     # Ports / OpenCode / product list (the single config entry)
 ├─ AGENTS.md                 # Collaboration conventions for the AI (a generic template you own and can edit)
 ├─ CONVENTIONS.md            # Explanation of the page red lines the checker enforces (coupled to the runtime)
-├─ skills/                   # xiaojia (restrained editing) + auto-test (auto-run checks after editing)
+├─ skills/                   # xiaojia (restrained editing) + auto-test (requires checks after editing)
 ├─ rules/                    # Empty directory: put your team's own PRD templates / UI guidelines here
 └─ product/<id>/pc/
    ├─ index.html             # Navigation shell (thin, references the /_kit runtime)
@@ -150,8 +173,8 @@ The three-layer separation determines **who is responsible for updates**, which 
 
 | Layer | Content | Ownership | Update method |
 |-------|---------|-----------|---------------|
-| **Runtime** | Server / shared engine / Agent panel / check scripts | Framework (mounted at `/_kit/`) | `npm update`, one command |
-| **Editable assets** | `AGENTS.md` `CONVENTIONS.md` `skills/` + your own `rules/` | You own them | `openprototype update` compares and merges as needed |
+| **Runtime** | Server / shared engine / Agent panel / check scripts | Framework (mounted at `/_kit/`) | `npm update openprototype` |
+| **Editable assets** | `AGENTS.md` `CONVENTIONS.md` `skills/` + your own `rules/` | You own them | `npx openprototype update` prints manual comparison and merge guidance |
 | **Business content** | Your product PRDs / prototypes / data | You own them | You maintain them yourself |
 
 > The framework ships only the **minimal generic conventions** (page red lines + editing restraint). Methodology like PRD templates, UI guidelines, and business terminology **belongs to you** — put it in `rules/` and `product/<id>/`; it's not distributed with the framework and won't be overwritten on upgrade.
@@ -166,18 +189,25 @@ The three-layer separation determines **who is responsible for updates**, which 
 
 ## 🧪 Quality assurance: the red-line checker
 
-`openprototype check` enforces these page red lines (see [CONVENTIONS.md](templates/CONVENTIONS.md) for details):
+`npx openprototype check` always runs the static red-line checks. After Playwright and Chromium are installed, it also runs real-browser smoke tests (see [CONVENTIONS.md](templates/CONVENTIONS.md) for details):
 
 - Fixed script load order · data must go through `BaseDataManager` (no page-level localStorage)
 - Status labels as constants (no hardcoded `<option>`) · no Google Fonts (system font stack)
 - `?mode=view` physical hiding (`display:none`, not `disabled`) · no console errors when opening a page
 
 ```bash
-openprototype check            # Scan all pages
-openprototype check --changed  # Scan only git changes
+npm run check          # Scan all pages
+npm run check:changed  # Scan only git changes
 ```
 
-The companion `auto-test` skill reminds the AI: **run the checks automatically after every prototype edit, and fix ERRORs before delivering.**
+Enable the browser layer once:
+
+```bash
+npm i -D playwright
+npx playwright install chromium
+```
+
+When Playwright or Chromium is missing, do not rely on browser-layer results; install both before treating `check` as the full check suite. The companion `auto-test` skill tells the Agent to run checks after every prototype edit and fix all ERRORs before delivery; this is an Agent workflow rule, not a server-side file watcher.
 
 ---
 
@@ -186,13 +216,17 @@ The companion `auto-test` skill reminds the AI: **run the checks automatically a
 ```json
 {
   "port": 8082,
-  "host": "127.0.0.1",                     // Local-only by default; '0.0.0.0' lets the LAN see the preview (/api/* stays local-only)
+  "host": "127.0.0.1",
+  "service": {
+    "autoInstall": true
+  },
   "opencode": {
-    "bin": "auto",                       // 'auto' auto-detects; you can also write an absolute path
+    "bin": "auto",
     "model": "deepseek/deepseek-v4-flash",
     "agent": "build",
     "host": "127.0.0.1",
-    "port": 4097
+    "port": 4097,
+    "startTimeoutMs": 15000
   },
   "products": [
     { "id": "demo", "roots": ["pc"] }
@@ -200,23 +234,29 @@ The companion `auto-test` skill reminds the AI: **run the checks automatically a
 }
 ```
 
+`host` defaults to `127.0.0.1`. Setting it to `0.0.0.0` exposes static file reads to the LAN, so review the security boundary above first. A long-running background service also requires an explicit `npx openprototype service install --allow-lan`.
+
 Environment variables can override temporarily: `PROTO_KIT_PORT` · `PROTO_KIT_HOST` · `OPENCODE_BIN` · `OPENCODE_MODEL` · `OPENCODE_PORT`.
-You can also use `node runtime/server.js --port 9000 --host 0.0.0.0` to specify the port / listen address ad hoc.
+You can also use `npx openprototype serve --port 9000 --host 0.0.0.0` to specify the port / listen address ad hoc.
 
 ---
 
 ## 📟 Commands
 
+The table uses `npx` for the default local-project installation. You can omit `npx` after a global installation. `create` adds npm script aliases, and `init` does the same when the project already has a `package.json`, so day-to-day commands can use `npm run serve`, `npm run check`, `npm run check:changed`, and `npm run nav:sync`.
+
 | Command | Purpose |
 |---------|---------|
-| `openprototype create <dir>` | Create a new project from scratch (with a runnable demo) |
-| `openprototype init` | Graft the framework into the current existing project (non-destructive) |
-| `openprototype add-product <id>` | Add a product shell (pc by default) |
-| `openprototype serve` | Start the local server |
-| `openprototype check [--changed]` | Automated checks (static red lines + smoke tests) |
-| `openprototype nav:sync` | Scan the product directory and rebuild `nav-tree.json` |
-| `openprototype doctor` | Health check (Node / OpenCode / config / Playwright) |
-| `openprototype update` | How to update the framework |
+| `npx openprototype create <dir>` | Create a new project from scratch with a runnable demo |
+| `npx openprototype init` | Add missing assets, merge scripts, and install the background service when configured |
+| `npx openprototype add-product <id> [--title <name>]` | Add a PC product shell with an optional display name |
+| `npx openprototype serve [--port <port>] [--host <address>]` | Start the foreground server with optional temporary listen overrides |
+| `npx openprototype service <action>` | Manage the background service: `install/start/stop/restart/status/logs/uninstall/prune` |
+| `npx openprototype check [--changed] [--static-only] [path]` | Check all pages, Git changes, or a path; optionally run static rules only |
+| `npx openprototype nav:sync` | Scan product directories and rebuild `nav-tree.json` |
+| `npx openprototype doctor` | Check Node / OpenCode / config / Playwright / background service health |
+| `npm update openprototype` | Upgrade the runtime package within the version range in `package.json` |
+| `npx openprototype update` | Print manual editable-asset comparison and merge guidance; does not upgrade |
 
 ---
 
@@ -236,6 +276,7 @@ Feature requests and feedback are welcome in Issues.
 PRs welcome. Development conventions:
 
 - Use only Node built-in modules; the runtime has zero dependencies (the checker's Playwright is a devDependency).
+- The core runtime supports Node ≥ 16; installing the current Playwright dependency and running the full checks requires Node ≥ 18.
 - Run `npm run check` after changing the runtime; after changing the shell / Agent panel, start the server locally and test the three columns for real.
 - Keep the repository **free of any private information** (company / personal / intranet addresses / secrets).
 
