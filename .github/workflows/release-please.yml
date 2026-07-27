@@ -3,12 +3,14 @@ name: Release Please
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: '17 * * * *'
   workflow_dispatch:
     inputs:
       tag:
-        description: 要补发的 Release tag（必须与 package.json 版本一致）
-        required: true
-        default: v1.0.0
+        description: 要补发的 Release tag；留空时自动使用 main 的 package.json 版本
+        required: false
+        default: ''
         type: string
 
 permissions:
@@ -105,7 +107,7 @@ jobs:
           package-manager-cache: false
       - name: 安装 Trusted Publishing 所需的 npm 版本
         if: ${{ steps.release.outputs.release_created }}
-        run: npm install --global npm@11.5.1
+        run: npm install --global npm@11
       - run: npm ci
         if: ${{ steps.release.outputs.release_created }}
       - name: 确认版本尚未发布
@@ -119,29 +121,94 @@ jobs:
           fi
       - name: 发布 npm 包（Trusted Publishing）
         if: ${{ steps.release.outputs.release_created }}
-        run: npm publish --provenance
+        run: |
+          package_name=$(node -p "require('./package.json').name")
+          package_version=$(node -p "require('./package.json').version")
+          publish_log="$RUNNER_TEMP/npm-publish.log"
+          : > "$publish_log"
+          for attempt in 1 2 3; do
+            echo "发布 $package_name@$package_version（第 $attempt/3 次）"
+            set +e
+            npm publish 2>&1 | tee -a "$publish_log"
+            publish_status=${PIPESTATUS[0]}
+            set -e
+            if [ "$publish_status" -eq 0 ]; then
+              exit 0
+            fi
+            if npm view "$package_name@$package_version" version > /dev/null 2>&1; then
+              echo "::notice::$package_name@$package_version 已出现在 npm，按发布成功处理"
+              exit 0
+            fi
+            [ "$attempt" -eq 3 ] || sleep $((attempt * 30))
+          done
+          if grep -q 'TLOG_CREATE_ENTRY_ERROR' "$publish_log"; then
+            echo "::warning::Sigstore 透明日志持续冲突，自动降级为无 provenance 发布"
+            NPM_CONFIG_PROVENANCE=false npm publish
+            exit 0
+          fi
+          echo "::error::$package_name@$package_version 连续 3 次发布失败，交由自动补发任务继续处理"
+          exit 1
+      - name: 验证 npm 已可读取新版本
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          package_name=$(node -p "require('./package.json').name")
+          package_version=$(node -p "require('./package.json').version")
+          for attempt in 1 2 3 4 5 6; do
+            published_version=$(npm view "$package_name@$package_version" version 2>/dev/null || true)
+            if [ "$published_version" = "$package_version" ]; then
+              echo "$package_name@$package_version 已发布"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::npm 在 60 秒内仍无法读取 $package_name@$package_version"
+          exit 1
 
   recover-publish:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    needs: [release]
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
     steps:
       - uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.tag }}
+      - name: 定位待补发的 Release tag
+        id: release-ref
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          release_tag="$INPUT_TAG"
+          if [ -z "$release_tag" ]; then
+            release_tag="v$(node -p "require('./package.json').version")"
+          fi
+          if ! git ls-remote --exit-code --tags origin "refs/tags/$release_tag" > /dev/null 2>&1; then
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              echo "::error::Release tag $release_tag 不存在"
+              exit 1
+            fi
+            echo "::notice::Release tag $release_tag 尚不存在，本次无需补发"
+            echo "has_tag=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git fetch --force --depth=1 origin "refs/tags/$release_tag:refs/tags/$release_tag"
+          git checkout --detach "$release_tag"
+          echo "tag=$release_tag" >> "$GITHUB_OUTPUT"
+          echo "has_tag=true" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v6
+        if: ${{ steps.release-ref.outputs.has_tag == 'true' }}
         with:
           node-version: 22.14.0
           registry-url: https://registry.npmjs.org
           package-manager-cache: false
       - name: 安装 Trusted Publishing 所需的 npm 版本
-        run: npm install --global npm@11.5.1
-      - run: npm ci
-      - name: 校验补发 tag 与包版本
+        if: ${{ steps.release-ref.outputs.has_tag == 'true' }}
+        run: npm install --global npm@11
+      - name: 校验 tag 并检查 npm 状态
+        id: preflight
+        if: ${{ steps.release-ref.outputs.has_tag == 'true' }}
         env:
-          RELEASE_TAG: ${{ inputs.tag }}
+          RELEASE_TAG: ${{ steps.release-ref.outputs.tag }}
         run: |
           package_name=$(node -p "require('./package.json').name")
           package_version=$(node -p "require('./package.json').version")
@@ -151,8 +218,55 @@ jobs:
             exit 1
           fi
           if npm view "$package_name@$package_version" version > /dev/null 2>&1; then
-            echo "::error::npm 上已存在 $package_name@$package_version，不能覆盖发布"
-            exit 1
+            echo "::notice::npm 已存在 $package_name@$package_version，本次无需补发"
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::检测到 GitHub Release $RELEASE_TAG 尚未同步到 npm，开始自动补发"
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
           fi
-      - name: 补发 npm 包（Trusted Publishing）
-        run: npm publish --provenance
+      - run: npm ci
+        if: ${{ steps.preflight.outputs.should_publish == 'true' }}
+      - name: 自动补发 npm 包（Trusted Publishing）
+        if: ${{ steps.preflight.outputs.should_publish == 'true' }}
+        run: |
+          package_name=$(node -p "require('./package.json').name")
+          package_version=$(node -p "require('./package.json').version")
+          publish_log="$RUNNER_TEMP/npm-recover-publish.log"
+          : > "$publish_log"
+          for attempt in 1 2 3; do
+            echo "补发 $package_name@$package_version（第 $attempt/3 次）"
+            set +e
+            npm publish 2>&1 | tee -a "$publish_log"
+            publish_status=${PIPESTATUS[0]}
+            set -e
+            if [ "$publish_status" -eq 0 ]; then
+              exit 0
+            fi
+            if npm view "$package_name@$package_version" version > /dev/null 2>&1; then
+              echo "::notice::$package_name@$package_version 已出现在 npm，按补发成功处理"
+              exit 0
+            fi
+            [ "$attempt" -eq 3 ] || sleep $((attempt * 30))
+          done
+          if grep -q 'TLOG_CREATE_ENTRY_ERROR' "$publish_log"; then
+            echo "::warning::Sigstore 透明日志持续冲突，自动降级为无 provenance 补发"
+            NPM_CONFIG_PROVENANCE=false npm publish
+            exit 0
+          fi
+          echo "::error::$package_name@$package_version 连续 3 次补发失败；下次 main push 或定时巡检会再次尝试"
+          exit 1
+      - name: 验证补发结果
+        if: ${{ steps.preflight.outputs.should_publish == 'true' }}
+        run: |
+          package_name=$(node -p "require('./package.json').name")
+          package_version=$(node -p "require('./package.json').version")
+          for attempt in 1 2 3 4 5 6; do
+            published_version=$(npm view "$package_name@$package_version" version 2>/dev/null || true)
+            if [ "$published_version" = "$package_version" ]; then
+              echo "$package_name@$package_version 已自动补发"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::npm 在 60 秒内仍无法读取 $package_name@$package_version"
+          exit 1

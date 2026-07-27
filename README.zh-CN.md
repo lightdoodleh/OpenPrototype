@@ -11,7 +11,7 @@
 *A local prototyping workbench: navigation tree · live preview · an AI agent that edits your HTML prototypes against their PRD.*
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
-![Node](https://img.shields.io/badge/node-%3E%3D16-brightgreen)
+![Node Core](https://img.shields.io/badge/node_core-%3E%3D16-brightgreen)
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-orange)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)
 
@@ -37,7 +37,7 @@
 
 1. **PRD（`.md`）和原型（`.html`）同目录并排放**，一处浏览、一处对齐。
 2. **右侧 AI Agent 自动携带「当前页面 + 当前 PRD」上下文**，你说"把某字段改成 XX"，它只改相关部分、不整页重写；还能识别 PRD 里**标红**的增量改动精准落地。
-3. **内置红线检查器**（脚本顺序、数据层、状态常量化、字体栈、`mode=view` 物理隐藏）在每次改动后自动跑，AI 产出想跑偏都难。
+3. **内置红线检查器**覆盖脚本顺序、数据层、状态常量化、字体栈与 `mode=view` 物理隐藏；配套 `auto-test` skill 会要求 Agent 在改完原型后执行检查。
 
 > 一句话：**给"PM + AI 做原型"这件事，配一套有护栏的本地工作台。**
 
@@ -49,9 +49,9 @@
 - 👁 **即时预览** —— 中间 iframe 直接渲染原型页面，点左侧即看。
 - 🤖 **上下文感知的 AI Agent** —— 接本机 [OpenCode](https://opencode.ai)，每条消息自动带当前页面 + PRD 路径；一键"按 PRD 标红内容更新页面"。
 - 🧱 **零后端的数据层** —— `BaseDataManager` 用 localStorage 做 CRUD，原型自带可交互假数据，不用起数据库。
-- ✅ **自动化红线检查** —— 静态规则 + Playwright 冒烟，改完即测，把 AI 拉回规范。
-- 📦 **脚手架分发** —— `create` 从零起项目、`init` 植入已有项目、`add-product` 加产品，`npm update` 升级框架。
-- 🖥 **跨平台** —— macOS / Windows / Linux；OpenCode 路径自动探测。
+- ✅ **自动化红线检查** —— 静态规则开箱可用；安装 Playwright 与 Chromium 后可增加真实浏览器冒烟测试。
+- 📦 **脚手架分发** —— `create` 从零起项目、`init` 植入已有项目、`add-product` 加产品，`npm update openprototype` 升级框架运行时。
+- 🖥 **跨平台** —— macOS / Windows / Linux 均可手动启动；常驻服务目前仅支持 macOS / Windows，OpenCode 路径自动探测。
 
 ---
 
@@ -77,7 +77,7 @@
 
 ## 🚀 快速开始
 
-> 前置：Node ≥ 16。AI 面板另需本机 [OpenCode](https://opencode.ai)（见下节，可后装）。
+> 前置：核心运行时需要 Node ≥ 16；若要运行 Playwright 冒烟测试或参与仓库开发，请使用 Node ≥ 18。AI 面板另需本机 [OpenCode](https://opencode.ai)（见后文，可后装）。
 
 ### 场景 ①：从零建项目
 
@@ -85,21 +85,43 @@
 npx openprototype create myapp
 cd myapp
 npm install
-npm run serve
 # 打开 http://127.0.0.1:8082/product/demo/pc/index.html
+```
+
+macOS / Windows 上，`npm install` 默认会注册并启动项目常驻服务，安装完成后直接打开上面的地址；不要再执行 `npm run serve`，否则会与常驻服务争用端口。Linux、禁用常驻服务或自动安装失败时，再执行：
+
+```bash
+npm run serve
 ```
 
 首跑就带一个可交互的 demo 产品（客户列表 + 表单 + PRD），照着它加自己的页面即可。
 
-### 场景 ②：植入已有项目（非破坏式）
+### 场景 ②：植入已有项目
 
 ```bash
 cd 你的项目
 npm i openprototype
-npx openprototype init          # 只补缺失文件、合并 package.json 脚本，不覆盖你已有内容
+npx openprototype init
 npx openprototype add-product shop
-npm run serve
+# 打开 http://127.0.0.1:8082/product/shop/pc/index.html
 ```
+
+`init` 不覆盖已有模板文件，会补充缺失资产并合并 `package.json` 脚本；但它也会修改 `package.json`，且默认在 macOS / Windows 上注册并启动系统常驻服务。Linux 或未启用常驻服务时，运行 `npm run serve` 手动启动。如果常驻服务已经运行，`add-product` 修改配置后执行一次 `npx openprototype service restart`，让 Agent 加载新产品的写入范围。
+
+### 常驻服务
+
+常驻服务让工作台在登录后自动运行，每个项目独立注册。它目前仅支持 macOS LaunchAgent 与 Windows 计划任务；Linux 请使用 `npm run serve`。
+
+```bash
+npx openprototype service status
+npx openprototype service restart
+npx openprototype service logs
+npx openprototype service uninstall
+```
+
+- 不想自动注册：在首次 `npm install` / `init` 前设置 `OPENPROTOTYPE_SERVICE_AUTO_INSTALL=0`，或提前在配置中设置 `"service": { "autoInstall": false }`。
+- `service stop` 只停止本次运行，下次登录仍会启动；永久取消请用 `service uninstall`。
+- 新增产品、修改端口或 Node 路径后，运行 `service restart` 让常驻服务加载新配置；升级包的安装钩子未自动重启成功时也应执行它。
 
 ---
 
@@ -115,7 +137,8 @@ npm run serve
 
 - **自动带上下文**：点左侧任一页面，面板顶部就显示「本条消息将携带：页面 X / PRD Y」，无需你手动贴路径。
 - **按 PRD 标红增量更新**：一键把 PRD 里 `<span style="color:red">…</span>` 标红的内容作为**唯一改动范围**发给 Agent —— 只改标红处，未标红的历史内容当背景，不重写、不"顺手优化"。
-- **本机私有**：服务器默认只监听 `127.0.0.1`；所有写入与 Agent 接口（`/api/*`）只接受本机请求——即使你用 `--host 0.0.0.0` 把预览开放给局域网同事，别人也只能看页面，改不了文件、动不了 Agent。
+- **默认仅本机访问**：服务器默认只监听 `127.0.0.1`；所有写入与 Agent 接口（`/api/*`）只接受本机请求。
+- **局域网开放边界**：使用 `--host 0.0.0.0` 后，局域网设备虽然不能调用写入与 Agent 接口，但能读取项目根目录下服务器可访问的非隐藏文件，不仅是原型页面。只应在可信网络和专用原型项目中使用，并确保项目中没有密钥或其他敏感文件。
 
 ### 安装 OpenCode（AI 面板前置）
 
@@ -138,7 +161,7 @@ npx openprototype doctor    # 一键体检 Node / OpenCode / 配置 / Playwright
 ├─ proto-kit.config.json     # 端口 / OpenCode / 产品列表（唯一配置入口）
 ├─ AGENTS.md                 # 给 AI 的协作规范（通用模板，你拥有可改）
 ├─ CONVENTIONS.md            # 检查器强制的页面红线说明（和运行时耦合）
-├─ skills/                   # xiaojia（编码克制）+ auto-test（改完自动跑检查）
+├─ skills/                   # xiaojia（编码克制）+ auto-test（要求改完运行检查）
 ├─ rules/                    # 空目录：放你团队自己的 PRD 模板 / UI 规范
 └─ product/<id>/pc/
    ├─ index.html             # 导航壳（薄，引用 /_kit 运行时）
@@ -150,8 +173,8 @@ npx openprototype doctor    # 一键体检 Node / OpenCode / 配置 / Playwright
 
 | 层 | 内容 | 归属 | 更新方式 |
 |----|------|------|----------|
-| **运行时** | 服务器 / shared 引擎 / Agent 面板 / 检查脚本 | 框架（挂在 `/_kit/`） | `npm update` 一键升 |
-| **可编辑资产** | `AGENTS.md` `CONVENTIONS.md` `skills/` + 你自建的 `rules/` | 你拥有 | `openprototype update` 对比后按需合并 |
+| **运行时** | 服务器 / shared 引擎 / Agent 面板 / 检查脚本 | 框架（挂在 `/_kit/`） | `npm update openprototype` |
+| **可编辑资产** | `AGENTS.md` `CONVENTIONS.md` `skills/` + 你自建的 `rules/` | 你拥有 | `npx openprototype update` 输出手工对比与合并指引 |
 | **业务内容** | 你的产品 PRD / 原型 / 数据 | 你拥有 | 你自己维护 |
 
 > 框架只带**最小通用规范**（页面红线 + 编码克制）。PRD 模板、UI 规范、业务术语这类**方法论属于你**，放进 `rules/` 与 `product/<id>/`，不随框架分发、也不被升级覆盖。
@@ -166,18 +189,25 @@ npx openprototype doctor    # 一键体检 Node / OpenCode / 配置 / Playwright
 
 ## 🧪 质量保障：红线检查器
 
-`openprototype check` 会强制这些页面红线（详见 [CONVENTIONS.md](templates/CONVENTIONS.md)）：
+`npx openprototype check` 会执行静态红线检查；安装 Playwright 与 Chromium 后，还会执行真实浏览器冒烟测试（详见 [CONVENTIONS.md](templates/CONVENTIONS.md)）：
 
 - 脚本加载顺序固定 · 数据必须走 `BaseDataManager`（禁页面级 localStorage）
 - 状态文案常量化（禁硬编码 `<option>`）· 禁 Google Fonts（系统字体栈）
 - `?mode=view` 物理隐藏（`display:none`，非 `disabled`）· 打开页面无 console 报错
 
 ```bash
-openprototype check            # 扫全部页面
-openprototype check --changed  # 只扫 git 改动
+npm run check          # 扫全部页面
+npm run check:changed  # 只扫 git 改动
 ```
 
-配套的 `auto-test` skill 会提醒 AI：**每次改完原型自动跑检查、修完 ERROR 再交付。**
+首次启用浏览器层：
+
+```bash
+npm i -D playwright
+npx playwright install chromium
+```
+
+未安装 Playwright 或 Chromium 时不能依赖浏览器层结果；安装完成后再把 `check` 视为完整检查。配套的 `auto-test` skill 会要求 Agent 在每次改完原型后运行检查并修完 ERROR；这是一条 Agent 工作流约定，不是服务器文件监听器。
 
 ---
 
@@ -186,13 +216,17 @@ openprototype check --changed  # 只扫 git 改动
 ```json
 {
   "port": 8082,
-  "host": "127.0.0.1",                     // 默认仅本机；'0.0.0.0' 可让局域网看预览（/api/* 仍仅限本机）
+  "host": "127.0.0.1",
+  "service": {
+    "autoInstall": true
+  },
   "opencode": {
-    "bin": "auto",                       // 'auto' 自动探测；也可写绝对路径
+    "bin": "auto",
     "model": "deepseek/deepseek-v4-flash",
     "agent": "build",
     "host": "127.0.0.1",
-    "port": 4097
+    "port": 4097,
+    "startTimeoutMs": 15000
   },
   "products": [
     { "id": "demo", "roots": ["pc"] }
@@ -200,23 +234,29 @@ openprototype check --changed  # 只扫 git 改动
 }
 ```
 
+`host` 默认为 `127.0.0.1`。设为 `0.0.0.0` 会向局域网开放静态文件读取，请先阅读上面的安全边界；长期运行的常驻服务还需显式执行 `npx openprototype service install --allow-lan`。
+
 环境变量可临时覆盖：`PROTO_KIT_PORT` · `PROTO_KIT_HOST` · `OPENCODE_BIN` · `OPENCODE_MODEL` · `OPENCODE_PORT`。
-也可用 `node runtime/server.js --port 9000 --host 0.0.0.0` 临时指定端口 / 监听地址。
+也可用 `npx openprototype serve --port 9000 --host 0.0.0.0` 临时指定端口 / 监听地址。
 
 ---
 
 ## 📟 命令
 
+下表按“项目本地安装 `openprototype`”的默认场景统一使用 `npx`；如果已全局安装，可以省略 `npx`。`create` 会写入常用 npm scripts，`init` 在项目已有 `package.json` 时也会补充，因此日常可使用 `npm run serve`、`npm run check`、`npm run check:changed` 和 `npm run nav:sync`。
+
 | 命令 | 作用 |
 |------|------|
-| `openprototype create <dir>` | 从零创建新项目（含可运行 demo） |
-| `openprototype init` | 把框架植入当前已有项目（非破坏式） |
-| `openprototype add-product <id>` | 新增一个产品壳（默认 pc） |
-| `openprototype serve` | 启动本地服务器 |
-| `openprototype check [--changed]` | 自动化检查（静态红线 + 冒烟） |
-| `openprototype nav:sync` | 扫描产品目录重建 `nav-tree.json` |
-| `openprototype doctor` | 体检（Node / OpenCode / 配置 / Playwright） |
-| `openprototype update` | 如何更新框架 |
+| `npx openprototype create <dir>` | 从零创建新项目（含可运行 demo） |
+| `npx openprototype init` | 补充缺失资产、合并脚本，并按配置安装常驻服务 |
+| `npx openprototype add-product <id> [--title <名称>]` | 新增一个 PC 产品壳，可指定显示名称 |
+| `npx openprototype serve [--port <端口>] [--host <地址>]` | 前台启动本地服务器，可临时覆盖监听配置 |
+| `npx openprototype service <action>` | 管理常驻服务：`install/start/stop/restart/status/logs/uninstall/prune` |
+| `npx openprototype check [--changed] [--static-only] [路径]` | 检查全部、Git 改动或指定范围；可只跑静态规则 |
+| `npx openprototype nav:sync` | 扫描产品目录并重建 `nav-tree.json` |
+| `npx openprototype doctor` | 体检 Node / OpenCode / 配置 / Playwright / 常驻服务 |
+| `npm update openprototype` | 按 `package.json` 的版本范围升级框架运行时包 |
+| `npx openprototype update` | 仅打印可编辑资产的手工对比与合并指引，不执行升级 |
 
 ---
 
@@ -236,6 +276,7 @@ openprototype check --changed  # 只扫 git 改动
 欢迎 PR。开发约定：
 
 - 只用 Node 内置模块，运行时零依赖（检查器的 Playwright 是 devDependency）。
+- 核心运行时支持 Node ≥ 16；完整安装当前 Playwright 依赖并跑检查需 Node ≥ 18。
 - 改运行时后跑 `npm run check`；改壳 / Agent 面板后本地起服务实测三栏。
 - 保持仓库**无任何私有信息**（公司 / 个人 / 内网地址 / 密钥）。
 
