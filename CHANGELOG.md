@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.0](https://github.com/lightdoodleh/OpenPrototype/compare/v1.1.0...v1.2.0) (2026-07-27)
+
+
+### Features
+
+* 更新文档和 CLI 注释，明确项目初始化和常驻服务安装说明 ([2bcc02c](https://github.com/lightdoodleh/OpenPrototype/commit/2bcc02c35738b434eba68fc32dc56a31437b9b34))
+* 添加新手引导功能，首次打开工作台时提供分步气泡提示 ([8a3fbd0](https://github.com/lightdoodleh/OpenPrototype/commit/8a3fbd0a10318c35fef6661608fe1429516b67aa))
+
+
+### Bug Fixes
+
+* automate npm publish recovery ([7e4760c](https://github.com/lightdoodleh/OpenPrototype/commit/7e4760c0813d919b02d1c15cf0ca2b7d4c70be92))
+* correct CLI command descriptions ([e309467](https://github.com/lightdoodleh/OpenPrototype/commit/e30946799ac44e8b7789b9bb14317b7fa045579f))
+
 ## [1.1.0](https://github.com/lightdoodleh/OpenPrototype/compare/v1.0.2...v1.1.0) (2026-07-24)
 
 
