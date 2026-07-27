@@ -205,7 +205,7 @@
 
     .workbench {
       display: grid;
-      grid-template-columns: 240px minmax(540px, 1fr) 300px;
+      grid-template-columns: 240px minmax(540px, 1fr) 380px;
       min-height: 650px;
       overflow: hidden;
       border: 1px solid #d7dee9;
@@ -214,9 +214,8 @@
       box-shadow: var(--shadow);
     }
 
-    .sidebar, .workflow { padding: 20px; background: #fbfcfe; }
+    .sidebar { padding: 20px; background: #fbfcfe; }
     .sidebar { border-right: 1px solid var(--line); }
-    .workflow { border-left: 1px solid var(--line); }
 
     .section-label {
       margin: 0 0 16px;
@@ -271,7 +270,13 @@
       line-height: 1.65;
     }
 
-    .canvas { padding: 24px; background: var(--canvas); }
+    .canvas {
+      position: relative;
+      min-width: 0;
+      overflow: hidden;
+      padding: 24px;
+      background: var(--canvas);
+    }
 
     .canvas-head {
       display: flex;
@@ -387,57 +392,190 @@
       line-height: 1.7;
     }
 
-    .workflow-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 22px; }
-    .workflow-title strong { font-size: 15px; }
-    .agent-status { color: var(--success); font-size: 12px; }
-
-    .steps { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
-
-    .step {
-      position: relative;
-      min-height: 92px;
-      padding: 2px 0 18px 44px;
+    .prd-float-button {
+      position: absolute;
+      right: 0;
+      bottom: 72px;
+      z-index: 4;
+      width: 40px;
+      height: 80px;
+      border: 0;
+      border-radius: 8px 0 0 8px;
+      color: #fff;
+      background: var(--brand);
+      box-shadow: -2px 2px 10px rgba(0, 0, 0, 0.15);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 650;
+      letter-spacing: 0.12em;
+      writing-mode: vertical-rl;
     }
 
-    .step:not(:last-child)::after {
+    .prd-float-button:hover { width: 46px; background: var(--brand-strong); }
+
+    .prd-drawer {
       position: absolute;
-      top: 32px;
-      bottom: 0;
-      left: 15px;
-      width: 1px;
-      background: #d7e0ed;
-      content: '';
+      inset: 0 0 0 auto;
+      z-index: 5;
+      display: flex;
+      width: min(620px, 86%);
+      flex-direction: column;
+      background: #fff;
+      box-shadow: -6px 0 24px rgba(22, 37, 61, 0.17);
+      transform: translateX(102%);
+      transition: transform 220ms ease;
     }
 
-    .step-number {
-      position: absolute;
-      top: 0;
-      left: 0;
-      display: grid;
-      width: 31px;
-      height: 31px;
-      place-items: center;
-      border-radius: 50%;
+    .prd-drawer.open { transform: translateX(0); }
+
+    .prd-drawer-head {
+      display: flex;
+      min-height: 54px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 18px;
+      color: #fff;
+      background: var(--brand);
+    }
+
+    .prd-drawer-title { min-width: 0; }
+    .prd-drawer-title strong { display: block; font-size: 15px; }
+    .prd-drawer-title span { display: block; margin-top: 2px; font-size: 10px; opacity: 0.8; }
+    .prd-drawer-actions { display: flex; align-items: center; gap: 8px; }
+
+    .prd-drawer-actions button {
+      height: 28px;
+      padding: 0 9px;
+      border: 0;
+      border-radius: 5px;
+      color: #fff;
+      background: rgba(255, 255, 255, 0.16);
+      cursor: pointer;
+      font-size: 11px;
+    }
+
+    .prd-drawer-actions button:hover { background: rgba(255, 255, 255, 0.26); }
+    .prd-drawer-content { flex: 1; overflow-y: auto; padding: 20px; }
+    .prd-drawer-content .panel { border: 0; padding: 0; }
+
+    .agent-demo {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      border-left: 1px solid #dfe5ee;
+      background: #fff;
+    }
+
+    .agent-demo.is-collapsed {
+      width: 42px;
+      justify-self: end;
+    }
+
+    .workbench.agent-collapsed { grid-template-columns: 240px minmax(540px, 1fr) 42px; }
+    .agent-demo.is-collapsed > :not(.agent-demo-header) { display: none; }
+    .agent-demo.is-collapsed .agent-demo-header-main,
+    .agent-demo.is-collapsed .agent-new-chat { display: none; }
+    .agent-demo.is-collapsed .agent-demo-header { height: 100%; align-items: flex-start; justify-content: center; padding: 8px 5px; }
+    .agent-demo.is-collapsed .agent-toggle { height: auto; padding: 8px 6px; color: var(--brand); writing-mode: vertical-rl; }
+
+    .agent-demo-header {
+      display: flex;
+      height: 48px;
+      flex: 0 0 auto;
+      align-items: center;
+      gap: 8px;
+      padding: 0 10px 0 14px;
+      border-bottom: 1px solid #edf0f5;
+    }
+
+    .agent-demo-header-main { min-width: 0; flex: 1; }
+    .agent-title-row { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 650; }
+    .agent-status-dot { width: 7px; height: 7px; border-radius: 50%; background: #18b54a; }
+    .agent-subtitle { margin-top: 2px; overflow: hidden; color: #7b8495; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+
+    .agent-header-button {
+      height: 26px;
+      padding: 0 8px;
+      border: 1px solid #dfe5ee;
+      border-radius: 5px;
+      color: #4f5665;
+      background: #fff;
+      cursor: pointer;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .agent-header-button:hover { border-color: #bfdbff; color: var(--brand); background: #f0f5ff; }
+
+    .agent-context {
+      flex: 0 0 auto;
+      padding: 10px 12px;
+      border-bottom: 1px solid #edf0f5;
+      background: #fafcff;
+    }
+
+    .agent-context-label { margin-bottom: 6px; color: #7b8495; font-size: 10px; }
+    .agent-context-chip { display: flex; min-width: 0; align-items: center; gap: 6px; margin-top: 4px; color: #4f5665; font-size: 11px; }
+    .agent-context-kind { min-width: 34px; flex: 0 0 auto; padding: 1px 5px; border-radius: 3px; color: var(--brand); background: #edf6ff; text-align: center; }
+    .agent-context-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .agent-quick-action {
+      width: 100%;
+      height: 30px;
+      margin-top: 9px;
+      border: 1px solid #bfdbff;
+      border-radius: 6px;
       color: var(--brand);
-      background: var(--brand-soft);
-      font-size: 12px;
-      font-weight: 750;
+      background: #fff;
+      cursor: pointer;
+      font-size: 11px;
     }
 
-    .step strong { display: block; margin-bottom: 7px; font-size: 13px; }
-    .step p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+    .agent-quick-action:hover { background: #edf6ff; }
 
-    .local-callout {
-      margin-top: 18px;
-      padding: 16px;
-      border-radius: 10px;
-      color: #d8e7fb;
-      background: #142033;
-      font-size: 12px;
-      line-height: 1.7;
+    .agent-messages {
+      min-height: 0;
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 12px 18px;
+      background: #f7f9fc;
     }
 
-    .local-callout strong { display: block; margin-bottom: 5px; color: #fff; font-size: 13px; }
+    .agent-message { margin-bottom: 14px; }
+    .agent-message-role { margin-bottom: 5px; color: #7b8495; font-size: 10px; }
+    .agent-message-body { padding: 9px 10px; border: 1px solid #e5eaf1; border-radius: 8px; color: #2e3440; background: #fff; font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .agent-message.is-user .agent-message-body { border-color: #cfe3ff; background: #edf6ff; }
+    .agent-message-context { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 5px; }
+    .agent-message-context span { padding: 1px 5px; border: 1px solid #d8e7fa; border-radius: 4px; color: #5a6b82; background: rgba(255, 255, 255, 0.78); font-size: 9px; }
+    .agent-tool { display: flex; align-items: center; gap: 7px; margin-top: 5px; padding: 5px 7px; border: 1px solid #e4e9f0; border-radius: 5px; color: #687386; background: #fafbfc; font-size: 10px; }
+    .agent-tool-dot { width: 6px; height: 6px; border-radius: 50%; background: #18b54a; }
+
+    .agent-empty { padding: 40px 18px; color: #7b8495; font-size: 12px; line-height: 1.7; text-align: center; }
+    .agent-empty strong { display: block; margin-bottom: 6px; color: #20242d; font-size: 14px; }
+
+    .agent-composer { flex: 0 0 auto; padding: 10px 12px 12px; border-top: 1px solid #dfe5ee; background: #fff; }
+    .agent-input-wrap { border: 1px solid #cfd7e3; border-radius: 8px; background: #fff; }
+    .agent-input-wrap:focus-within { border-color: var(--brand); box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.08); }
+
+    .agent-input {
+      width: 100%;
+      min-height: 62px;
+      max-height: 140px;
+      padding: 9px 10px 4px;
+      resize: none;
+      border: 0;
+      outline: 0;
+      color: #20242d;
+      background: transparent;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .agent-composer-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 6px 6px 10px; }
+    .agent-composer-hint { color: #a0a9b8; font-size: 9px; }
+    .agent-send-button { min-width: 52px; height: 28px; padding: 0 10px; border: 0; border-radius: 5px; color: #fff; background: var(--brand); cursor: pointer; font-size: 11px; }
+    .agent-send-button:disabled { cursor: not-allowed; background: #b9c9df; }
 
     .view { display: none; }
     .view.active { display: block; }
@@ -454,14 +592,16 @@
     @media (max-width: 1120px) {
       .intro { grid-template-columns: 1fr; }
       .workbench { grid-template-columns: 210px minmax(0, 1fr); }
-      .workflow {
+      .agent-demo {
         grid-column: 1 / -1;
+        min-height: 460px;
         border-top: 1px solid var(--line);
         border-left: 0;
       }
-      .steps { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-      .step { min-height: 0; padding: 42px 0 0; }
-      .step:not(:last-child)::after { display: none; }
+      .agent-demo.is-collapsed { width: 100%; min-height: 42px; }
+      .workbench.agent-collapsed { grid-template-columns: 210px minmax(0, 1fr); }
+      .agent-demo.is-collapsed .agent-demo-header { height: 42px; align-items: center; justify-content: flex-end; }
+      .agent-demo.is-collapsed .agent-toggle { writing-mode: horizontal-tb; }
     }
 
     @media (max-width: 760px) {
@@ -489,10 +629,9 @@
       .search-actions { width: 100%; margin-left: 0; }
       .detail-grid { grid-template-columns: 1fr; }
       .detail-item.full { grid-column: auto; }
-      .workflow { padding: 18px; }
-      .steps { grid-template-columns: 1fr; }
-      .step { min-height: 82px; padding: 2px 0 16px 44px; }
-      .step:not(:last-child)::after { display: block; }
+      .agent-demo { min-height: 520px; }
+      .prd-drawer { width: 100%; }
+      .prd-float-button { bottom: 28px; }
       .install-card { padding: 18px; }
       .command { align-items: flex-start; flex-direction: column; }
     }
@@ -534,7 +673,7 @@
       <div class="demo-heading">
         <div>
           <h2 id="demo-title">无需安装，先体验产品闭环</h2>
-          <p>切换页面、筛选客户、查看详情和 PRD 增量。所有数据都只存在于当前页面。</p>
+          <p>切换页面、筛选客户、打开内嵌 PRD，并体验右侧 Agent 对话。所有数据都只存在于当前页面。</p>
         </div>
         <span class="read-only">只读在线演示</span>
       </div>
@@ -545,7 +684,6 @@
           <div class="tree-group">客户管理</div>
           <button class="view-button" type="button" data-view="list" aria-selected="true">客户列表</button>
           <button class="view-button" type="button" data-view="detail" aria-selected="false">客户详情</button>
-          <button class="view-button" type="button" data-view="prd" aria-selected="false">对应 PRD</button>
           <div class="sidebar-note">本地版会自动扫描产品目录，并把每个 HTML 页面与同目录 PRD 配成一组。</div>
         </aside>
 
@@ -607,54 +745,63 @@
             </div>
           </div>
 
-          <div class="view" id="view-prd">
-            <article class="panel prd-copy">
-              <h4>客户列表 PRD</h4>
-              <p>右侧 Agent 在本地版中会自动携带当前页面和这份 PRD。未标红内容只作为背景，不进入本次修改范围。</p>
-              <h4>字段表</h4>
-              <table>
-                <thead><tr><th>字段</th><th>说明</th><th>必填</th></tr></thead>
-                <tbody>
-                  <tr><td>客户名称</td><td>支持模糊查询</td><td>否</td></tr>
-                  <tr><td>状态</td><td>启用 / 停用</td><td>否</td></tr>
-                  <tr><td><mark>客户等级</mark></td><td><mark>增加 C 类，并同步列表与详情</mark></td><td>否</td></tr>
-                </tbody>
-              </table>
-              <div class="impact"><strong>本次影响范围：</strong>PRD 字段表、列表等级显示、详情等级显示和 mock 数据枚举。Agent 不应重写其他交互。</div>
-            </article>
-          </div>
+          <button class="prd-float-button" id="prdFloatButton" type="button" aria-controls="prdDrawer" aria-expanded="false">PRD</button>
+          <aside class="prd-drawer" id="prdDrawer" aria-label="当前页面 PRD" aria-hidden="true">
+            <div class="prd-drawer-head">
+              <div class="prd-drawer-title">
+                <strong id="prdDrawerTitle">客户列表 - PRD</strong>
+                <span id="prdDrawerFile">customer_list.md</span>
+              </div>
+              <div class="prd-drawer-actions">
+                <button id="copyPrd" type="button">复制 MD</button>
+                <button id="closePrd" type="button" aria-label="关闭 PRD">关闭</button>
+              </div>
+            </div>
+            <div class="prd-drawer-content">
+              <article class="panel prd-copy">
+                <h4>客户列表 PRD</h4>
+                <p>右侧 Agent 会自动携带当前页面和这份 PRD。未标红内容只作为背景，不进入本次修改范围。</p>
+                <h4>字段表</h4>
+                <div class="table-scroll">
+                  <table>
+                    <thead><tr><th>字段</th><th>说明</th><th>必填</th></tr></thead>
+                    <tbody>
+                      <tr><td>客户名称</td><td>支持模糊查询</td><td>否</td></tr>
+                      <tr><td>状态</td><td>启用 / 停用</td><td>否</td></tr>
+                      <tr><td><mark>客户等级</mark></td><td><mark>增加 C 类，并同步列表与详情</mark></td><td>否</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="impact"><strong>本次影响范围：</strong>PRD 字段表、列表等级显示、详情等级显示和 mock 数据枚举。Agent 不应重写其他交互。</div>
+              </article>
+            </div>
+          </aside>
         </section>
 
-        <aside class="workflow" aria-label="OpenPrototype 核心工作流">
-          <div class="workflow-title">
-            <strong>受控更新流程</strong>
-            <span class="agent-status">● Agent ready</span>
+        <aside class="agent-demo" id="agentDemo" aria-label="OpenCode Agent 对话">
+          <div class="agent-demo-header">
+            <div class="agent-demo-header-main">
+              <div class="agent-title-row"><span class="agent-status-dot"></span><span>Agent · OpenCode</span></div>
+              <div class="agent-subtitle">演示会话 · 不连接本机模型</div>
+            </div>
+            <button class="agent-header-button agent-new-chat" id="newAgentChat" type="button">新对话</button>
+            <button class="agent-header-button agent-toggle" id="toggleAgent" type="button">收起</button>
           </div>
-          <ol class="steps">
-            <li class="step">
-              <span class="step-number">01</span>
-              <strong>标出需求增量</strong>
-              <p>在 PRD 里只标出本次要变的字段或规则。</p>
-            </li>
-            <li class="step">
-              <span class="step-number">02</span>
-              <strong>自动携带上下文</strong>
-              <p>Agent 同时获得当前 HTML、对应 PRD 和项目规范。</p>
-            </li>
-            <li class="step">
-              <span class="step-number">03</span>
-              <strong>同步相关文件</strong>
-              <p>页面、PRD 与 mock 数据按同一事实边界更新。</p>
-            </li>
-            <li class="step">
-              <span class="step-number">04</span>
-              <strong>运行红线检查</strong>
-              <p>静态规则与浏览器冒烟在评审前暴露偏差。</p>
-            </li>
-          </ol>
-          <div class="local-callout">
-            <strong>为什么在线版不直接运行 Agent？</strong>
-            OpenPrototype 默认只在本机工作，文件修改和 Agent 接口不开放到公网。这份页面只用于零安装体验。
+          <div class="agent-context">
+            <div class="agent-context-label">本条消息将携带</div>
+            <div class="agent-context-chip"><span class="agent-context-kind">页面</span><span class="agent-context-value" id="agentHtmlContext">customer_list.html</span></div>
+            <div class="agent-context-chip"><span class="agent-context-kind">PRD</span><span class="agent-context-value" id="agentPrdContext">customer_list.md</span></div>
+            <button class="agent-quick-action" id="agentPrdAction" type="button">按当前 PRD 标红内容更新页面</button>
+          </div>
+          <div class="agent-messages" id="agentMessages"></div>
+          <div class="agent-composer">
+            <div class="agent-input-wrap">
+              <textarea class="agent-input" id="agentInput" placeholder="描述要修改的字段、交互或 PRD…"></textarea>
+              <div class="agent-composer-actions">
+                <span class="agent-composer-hint">Enter 发送 · Shift+Enter 换行</span>
+                <button class="agent-send-button" id="agentSend" type="button" disabled>发送</button>
+              </div>
+            </div>
           </div>
         </aside>
       </div>
@@ -677,16 +824,35 @@
       { id: '000003', name: '演示健康管理集团', contact: '王五', phone: '13800000003', level: 'C', status: 'disabled' }
     ];
     const VIEW_META = {
-      list: { title: '客户列表', path: 'customer / customer_list.html' },
-      detail: { title: '客户详情', path: 'customer / customer_detail.html?mode=view' },
-      prd: { title: '客户列表 PRD', path: 'customer / customer_list.md' }
+      list: { title: '客户列表', path: 'customer / customer_list.html', html: 'customer_list.html', prd: 'customer_list.md' },
+      detail: { title: '客户详情', path: 'customer / customer_detail.html?mode=view', html: 'customer_detail.html', prd: 'customer_detail.md' }
     };
+    const INITIAL_AGENT_MESSAGES = [
+      {
+        role: 'user',
+        text: '请按 PRD 标红内容，把客户等级增加 C 类，并同步列表、详情和 mock 数据。'
+      },
+      {
+        role: 'assistant',
+        text: '已读取当前页面、对应 PRD 和项目规范。C 类已经同步到列表、详情与示例数据，未改动其他交互。',
+        tools: ['读取 customer_list.md', '更新页面与 mock 数据', 'openprototype check --changed · 通过']
+      }
+    ];
 
     const rows = document.getElementById('customerRows');
     const keyword = document.getElementById('customerKeyword');
     const status = document.getElementById('customerStatus');
     const viewTitle = document.getElementById('viewTitle');
     const viewPath = document.getElementById('viewPath');
+    const prdDrawer = document.getElementById('prdDrawer');
+    const prdFloatButton = document.getElementById('prdFloatButton');
+    const workbench = document.querySelector('.workbench');
+    const agentDemo = document.getElementById('agentDemo');
+    const agentMessages = document.getElementById('agentMessages');
+    const agentInput = document.getElementById('agentInput');
+    const agentSend = document.getElementById('agentSend');
+    let currentView = 'list';
+    let agentMessageState = INITIAL_AGENT_MESSAGES.map(item => ({ ...item, tools: item.tools ? [...item.tools] : [] }));
 
     STATUS_OPTIONS.forEach(item => {
       const option = document.createElement('option');
@@ -760,8 +926,13 @@
     function switchView(name) {
       document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.id === `view-${name}`));
       document.querySelectorAll('.view-button').forEach(button => button.setAttribute('aria-selected', String(button.dataset.view === name)));
+      currentView = name;
       viewTitle.textContent = VIEW_META[name].title;
       viewPath.textContent = VIEW_META[name].path;
+      document.getElementById('agentHtmlContext').textContent = VIEW_META[name].html;
+      document.getElementById('agentPrdContext').textContent = VIEW_META[name].prd;
+      document.getElementById('prdDrawerTitle').textContent = `${VIEW_META[name].title} - PRD`;
+      document.getElementById('prdDrawerFile').textContent = VIEW_META[name].prd;
     }
 
     document.querySelectorAll('.view-button').forEach(button => {
@@ -798,7 +969,120 @@
       }
     });
 
+    function setPrdOpen(open) {
+      prdDrawer.classList.toggle('open', open);
+      prdDrawer.setAttribute('aria-hidden', String(!open));
+      prdFloatButton.setAttribute('aria-expanded', String(open));
+    }
+
+    function renderAgentMessages() {
+      agentMessages.replaceChildren();
+      if (!agentMessageState.length) {
+        const empty = document.createElement('div');
+        empty.className = 'agent-empty';
+        const title = document.createElement('strong');
+        title.textContent = '直接修改当前原型';
+        const copy = document.createElement('span');
+        copy.textContent = '从左侧选择页面，然后描述需要调整的字段、交互或 PRD。';
+        empty.append(title, copy);
+        agentMessages.appendChild(empty);
+        return;
+      }
+
+      agentMessageState.forEach(message => {
+        const wrapper = document.createElement('div');
+        wrapper.className = `agent-message is-${message.role}`;
+        const role = document.createElement('div');
+        role.className = 'agent-message-role';
+        role.textContent = message.role === 'user' ? '你' : 'OpenCode';
+        wrapper.appendChild(role);
+
+        if (message.role === 'user') {
+          const context = document.createElement('div');
+          context.className = 'agent-message-context';
+          [VIEW_META[currentView].html, VIEW_META[currentView].prd].forEach((value, index) => {
+            const chip = document.createElement('span');
+            chip.textContent = `${index ? 'PRD' : '页面'} · ${value}`;
+            context.appendChild(chip);
+          });
+          wrapper.appendChild(context);
+        }
+
+        const body = document.createElement('div');
+        body.className = 'agent-message-body';
+        body.textContent = message.text;
+        wrapper.appendChild(body);
+
+        (message.tools || []).forEach(label => {
+          const tool = document.createElement('div');
+          tool.className = 'agent-tool';
+          const dot = document.createElement('span');
+          dot.className = 'agent-tool-dot';
+          const copy = document.createElement('span');
+          copy.textContent = label;
+          tool.append(dot, copy);
+          wrapper.appendChild(tool);
+        });
+        agentMessages.appendChild(wrapper);
+      });
+      agentMessages.scrollTop = agentMessages.scrollHeight;
+    }
+
+    function sendAgentMessage(text) {
+      const value = String(text || '').trim();
+      if (!value) return;
+      agentMessageState.push({ role: 'user', text: value, tools: [] });
+      agentInput.value = '';
+      agentSend.disabled = true;
+      renderAgentMessages();
+      window.setTimeout(() => {
+        agentMessageState.push({
+          role: 'assistant',
+          text: '这是只读演示会话：我已收到你的需求，并会在本地版中携带当前页面与 PRD 后执行修改。',
+          tools: ['已携带页面与 PRD 上下文']
+        });
+        renderAgentMessages();
+      }, 450);
+    }
+
+    prdFloatButton.addEventListener('click', () => setPrdOpen(true));
+    document.getElementById('closePrd').addEventListener('click', () => setPrdOpen(false));
+    document.getElementById('copyPrd').addEventListener('click', async event => {
+      const button = event.currentTarget;
+      try {
+        await navigator.clipboard.writeText(document.querySelector('.prd-drawer-content').innerText);
+        button.textContent = '已复制';
+      } catch {
+        button.textContent = '请手动复制';
+      }
+      window.setTimeout(() => { button.textContent = '复制 MD'; }, 1200);
+    });
+    document.getElementById('newAgentChat').addEventListener('click', () => {
+      agentMessageState = [];
+      renderAgentMessages();
+      agentInput.focus();
+    });
+    document.getElementById('toggleAgent').addEventListener('click', event => {
+      const collapsed = agentDemo.classList.toggle('is-collapsed');
+      workbench.classList.toggle('agent-collapsed', collapsed);
+      event.currentTarget.textContent = collapsed ? 'Agent' : '收起';
+    });
+    document.getElementById('agentPrdAction').addEventListener('click', () => {
+      sendAgentMessage('请按当前 PRD 标红内容更新页面。');
+    });
+    agentInput.addEventListener('input', () => {
+      agentSend.disabled = !agentInput.value.trim();
+    });
+    agentInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendAgentMessage(agentInput.value);
+      }
+    });
+    agentSend.addEventListener('click', () => sendAgentMessage(agentInput.value));
+
     renderRows(CUSTOMERS);
+    renderAgentMessages();
   </script>
 </body>
 </html>
