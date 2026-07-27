@@ -47,6 +47,7 @@ The recurring pain points when a PM builds prototypes:
 
 - 🌲 **Navigation tree** — scans the product directory to auto-generate a page tree, with fuzzy title search, version badges (read from the PRD version table), and review markers.
 - 👁 **Live preview** — the middle iframe renders the prototype page directly; click on the left and see it instantly.
+- 🧭 **First-run tour** — the first time you open the workbench, a 5-step bubble walkthrough covers create a page → find it → preview it → change it with the Agent → update it from the PRD. It shows once, and the "?" next to the sidebar title replays it anytime.
 - 🤖 **Context-aware AI Agent** — connects to your local [OpenCode](https://opencode.ai); every message automatically carries the current page + PRD path, with one-click "update the page per the PRD's red-marked content."
 - 🧱 **Zero-backend data layer** — `BaseDataManager` does CRUD via localStorage, so prototypes ship with interactive fake data and no database to spin up.
 - ✅ **Automated red-line checks** — static rules work out of the box; install Playwright and Chromium to add real-browser smoke tests.
@@ -173,9 +174,13 @@ The three-layer separation determines **who is responsible for updates**, which 
 
 | Layer | Content | Ownership | Update method |
 |-------|---------|-----------|---------------|
-| **Runtime** | Server / shared engine / Agent panel / check scripts | Framework (mounted at `/_kit/`) | `npm update openprototype` |
+| **Runtime** | Server / shared engine / Agent panel / first-run tour / check scripts | Framework (mounted at `/_kit/`) | `npm update openprototype` |
 | **Editable assets** | `AGENTS.md` `CONVENTIONS.md` `skills/` + your own `rules/` | You own them | `npx openprototype update` prints manual comparison and merge guidance |
 | **Business content** | Your product PRDs / prototypes / data | You own them | You maintain them yourself |
+
+> **The product shell (`product/<id>/pc/index.html`) is copied at scaffold time and does not upgrade with the package.** When the framework adds a new shell entry point (such as the first-run tour), run `npx openprototype init` once after upgrading to patch it in — the patch is idempotent, skips shells that already have it, and leaves your own edits alone.
+>
+> First-run tour switches: add `?tour=off` to the URL to suppress it for that load; in the browser console, `window.ProtoTour.reset()` clears the "already seen" flag and `window.ProtoTour.start()` replays it on demand.
 
 > The framework ships only the **minimal generic conventions** (page red lines + editing restraint). Methodology like PRD templates, UI guidelines, and business terminology **belongs to you** — put it in `rules/` and `product/<id>/`; it's not distributed with the framework and won't be overwritten on upgrade.
 

@@ -97,6 +97,69 @@ function scaffoldProductShell(projectRoot, productId, productTitle) {
   writeFileSafe(path.join(dir, 'nav-tree.json'), '[]\n');
 }
 
+// 新手引导的两行引用标签。壳 HTML 是脚手架时复制的、不会随 npm update 升级，
+// 所以老项目的壳里没有这两行；这里在 init 时补进去（真正的逻辑在 /_kit/shell/onboarding.*，会随包升级）。
+const ONBOARDING_MARK = 'onboarding:start';
+const ONBOARDING_HEAD = [
+  '<!-- onboarding:start (本地开发专用；发布时可由 openprototype publish 自动剥离) -->',
+  '<link rel="stylesheet" href="/_kit/shell/onboarding.css">',
+  '<!-- onboarding:end -->'
+].join('\n');
+const ONBOARDING_BODY = [
+  '<!-- onboarding:start (本地开发专用；发布时可由 openprototype publish 自动剥离) -->',
+  '<script src="/_kit/shell/onboarding.js"></script>',
+  '<!-- onboarding:end -->'
+].join('\n');
+
+/** 列出 product/<id>/<root>/index.html —— 已生成的产品壳 */
+function listProductShells(projectRoot) {
+  const shells = [];
+  const productDir = path.join(projectRoot, 'product');
+  if (!fs.existsSync(productDir)) return shells;
+  for (const productId of fs.readdirSync(productDir)) {
+    const dir = path.join(productDir, productId);
+    if (!fs.statSync(dir).isDirectory()) continue;
+    for (const rootName of fs.readdirSync(dir)) {
+      const shell = path.join(dir, rootName, 'index.html');
+      if (fs.existsSync(shell)) shells.push(shell);
+    }
+  }
+  return shells;
+}
+
+/**
+ * 给已有的产品壳补上新手引导的引用标签。
+ * 幂等：见到 onboarding:start 就跳过；壳里没有 agent-panel 标记的一律不动（不是本框架的壳）。
+ * 引导的 <script> 必须排在 agent-panel.js 之后，那里才定义了 window.PROTO_KIT。
+ */
+function patchShellOnboarding(projectRoot) {
+  let patched = 0;
+  for (const shell of listProductShells(projectRoot)) {
+    const rel = path.relative(projectRoot, shell);
+    let html = fs.readFileSync(shell, 'utf8');
+    if (html.includes(ONBOARDING_MARK)) { info(C.dim('  跳过（已有引导入口）: ') + rel); continue; }
+    if (!html.includes('/_kit/shell/agent-panel.js')) { info(C.dim('  跳过（非本框架的壳）: ') + rel); continue; }
+
+    const headAnchor = '<!-- agent-panel:end -->';
+    const bodyAnchor = '<script src="/_kit/shell/agent-panel.js"></script>';
+    const headAt = html.indexOf(headAnchor);
+    const bodyAt = html.indexOf(bodyAnchor);
+    if (headAt === -1 || bodyAt === -1) { info(C.dim('  跳过（壳结构不认识）: ') + rel); continue; }
+
+    // 先补后面的、再补前面的，免得插入把后一个位置的下标顶偏
+    const bodyEnd = html.indexOf(headAnchor, bodyAt);
+    const bodyInsertAt = bodyEnd === -1 ? bodyAt + bodyAnchor.length : bodyEnd + headAnchor.length;
+    html = html.slice(0, bodyInsertAt) + '\n' + ONBOARDING_BODY + html.slice(bodyInsertAt);
+    const headInsertAt = headAt + headAnchor.length;
+    html = html.slice(0, headInsertAt) + '\n' + ONBOARDING_HEAD + html.slice(headInsertAt);
+
+    fs.writeFileSync(shell, html);
+    ok('已补上新手引导入口 ' + rel);
+    patched++;
+  }
+  return patched;
+}
+
 /** 新项目 package.json 里本框架的依赖版本（已发布 npm，语义化版本管理） */
 function kitDependencySpec() {
   const pkg = readJson(path.join(PKG_ROOT, 'package.json'), {});
@@ -177,6 +240,8 @@ async function cmdInit() {
     saveConfig(root, JSON.parse(JSON.stringify(DEFAULTS)));
     ok('写入 ' + CONFIG_FILENAME);
   } else info(C.dim('  跳过（已存在）: ') + CONFIG_FILENAME);
+
+  patchShellOnboarding(root);
 
   // 合并 package.json 脚本（不覆盖用户已有脚本）
   const pkgPath = path.join(root, 'package.json');
@@ -396,6 +461,9 @@ function cmdUpdate() {
   info(C.b('\n更新 openprototype\n'));
   info('运行时（服务器 / shared 引擎 / Agent 面板 / 检查脚本）随包升级：');
   info(C.g('  npm update openprototype\n'));
+  info('产品壳（product/*/*/index.html）是脚手架时复制的，不随包升级。');
+  info('升级后跑一次下面这条，可给已有的壳补上新功能入口（幂等，已有的会跳过）：');
+  info(C.g('  npx openprototype init\n'));
   info('可编辑资产（rules / prompts / workflow / AGENTS.md）由你拥有，不会被自动覆盖。');
   info('想同步最新模板时，对比这些目录后按需合并：');
   info(C.dim('  node_modules/openprototype/templates/  →  你项目里的 AGENTS.md / CONVENTIONS.md / skills/'));

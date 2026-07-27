@@ -47,6 +47,7 @@
 
 - 🌲 **树形导航** —— 扫描产品目录自动生成页面树，支持标题模糊搜索、版本号徽标（从 PRD 版本表读取）、审核标记。
 - 👁 **即时预览** —— 中间 iframe 直接渲染原型页面，点左侧即看。
+- 🧭 **新手引导** —— 首次打开工作台自动弹出 5 步气泡，把「新建页面 → 找页面 → 预览 → Agent 改页面 → 按 PRD 更新」走一遍；看过一次就不再出现，侧栏标题旁的「?」可随时重看。
 - 🤖 **上下文感知的 AI Agent** —— 接本机 [OpenCode](https://opencode.ai)，每条消息自动带当前页面 + PRD 路径；一键"按 PRD 标红内容更新页面"。
 - 🧱 **零后端的数据层** —— `BaseDataManager` 用 localStorage 做 CRUD，原型自带可交互假数据，不用起数据库。
 - ✅ **自动化红线检查** —— 静态规则开箱可用；安装 Playwright 与 Chromium 后可增加真实浏览器冒烟测试。
@@ -173,9 +174,15 @@ npx openprototype doctor    # 一键体检 Node / OpenCode / 配置 / Playwright
 
 | 层 | 内容 | 归属 | 更新方式 |
 |----|------|------|----------|
-| **运行时** | 服务器 / shared 引擎 / Agent 面板 / 检查脚本 | 框架（挂在 `/_kit/`） | `npm update openprototype` |
+| **运行时** | 服务器 / shared 引擎 / Agent 面板 / 新手引导 / 检查脚本 | 框架（挂在 `/_kit/`） | `npm update openprototype` |
 | **可编辑资产** | `AGENTS.md` `CONVENTIONS.md` `skills/` + 你自建的 `rules/` | 你拥有 | `npx openprototype update` 输出手工对比与合并指引 |
 | **业务内容** | 你的产品 PRD / 原型 / 数据 | 你拥有 | 你自己维护 |
+
+> **产品壳（`product/<id>/pc/index.html`）是脚手架时复制的，不随包升级。** 框架给壳加了新入口（比如新手引导）时，
+> 升级后跑一次 `npx openprototype init` 即可补上——幂等，已有的会跳过，你自己改过的部分不动。
+>
+> 新手引导的开关：URL 加 `?tour=off` 本次不弹；浏览器控制台执行 `window.ProtoTour.reset()` 可重置"已看过"标记，
+> `window.ProtoTour.start()` 直接手动开一次。
 
 > 框架只带**最小通用规范**（页面红线 + 编码克制）。PRD 模板、UI 规范、业务术语这类**方法论属于你**，放进 `rules/` 与 `product/<id>/`，不随框架分发、也不被升级覆盖。
 
