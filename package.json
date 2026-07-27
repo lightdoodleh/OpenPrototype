@@ -1,10 +1,14 @@
 {
   "name": "openprototype",
   "version": "1.1.0",
-  "description": "本地原型工作台：左侧树形导航 + 中间原型预览 + 右侧 AI Agent（OpenCode）。PRD 与 HTML/JS 原型协作，含自动化检查。",
+  "description": "Local AI prototyping workbench that keeps PRDs, HTML prototypes, and mock data in sync.",
   "keywords": [
     "prototype",
+    "ai-prototyping",
     "prd",
+    "product-management",
+    "html-prototype",
+    "local-first",
     "opencode",
     "agent",
     "scaffold",
@@ -16,7 +20,7 @@
     "type": "git",
     "url": "git+https://github.com/lightdoodleh/openprototype.git"
   },
-  "homepage": "https://github.com/lightdoodleh/openprototype#readme",
+  "homepage": "https://lightdoodleh.github.io/OpenPrototype/",
   "bugs": "https://github.com/lightdoodleh/openprototype/issues",
   "engines": {
     "node": ">=16"
@@ -48,7 +52,8 @@
     "proto-kit.config.json",
     "AGENTS.md",
     "CONVENTIONS.md",
-    "README.md"
+    "README.md",
+    "image/README/core-loop.gif"
   ],
   "devDependencies": {
     "playwright": "^1.49.0"

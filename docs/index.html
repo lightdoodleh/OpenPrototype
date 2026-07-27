@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenPrototype 在线只读演示</title>
+  <meta name="description" content="无需安装，直接体验 OpenPrototype 如何让 PRD、HTML 原型和 mock 数据在 AI 修改时保持一致。">
+  <meta property="og:title" content="OpenPrototype — AI 改需求时，让 PRD、原型和 mock 数据始终一致">
+  <meta property="og:description" content="在线体验 PRD 增量、交互原型与自动检查组成的受控闭环。">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://lightdoodleh.github.io/OpenPrototype/">
+  <meta property="og:image" content="https://lightdoodleh.github.io/OpenPrototype/social-preview.png">
+  <style>
+    :root {
+      color-scheme: light;
+      --brand: #1677ff;
+      --brand-strong: #0d5edb;
+      --brand-soft: #eaf3ff;
+      --ink: #1d2533;
+      --muted: #6b7482;
+      --line: #e3e8f0;
+      --panel: #ffffff;
+      --canvas: #f3f5f8;
+      --success: #16a34a;
+      --warning: #d97706;
+      --radius: 12px;
+      --shadow: 0 18px 46px rgba(31, 49, 78, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+      color: var(--ink);
+      background: #eef2f7;
+    }
+
+    button, input, select { font: inherit; }
+
+    button, a { -webkit-tap-highlight-color: transparent; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      min-height: 64px;
+      padding: 0 28px;
+      background: rgba(255, 255, 255, 0.94);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(16px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      color: var(--ink);
+      font-size: 18px;
+      font-weight: 750;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 30px;
+      height: 30px;
+      place-items: center;
+      border-radius: 8px;
+      color: #fff;
+      background: var(--brand);
+      box-shadow: 0 7px 18px rgba(22, 119, 255, 0.3);
+    }
+
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+
+    .button {
+      display: inline-flex;
+      min-height: 38px;
+      align-items: center;
+      justify-content: center;
+      padding: 0 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: #394253;
+      background: #fff;
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color 160ms ease, color 160ms ease, background 160ms ease, transform 160ms ease;
+    }
+
+    .button:hover { border-color: #a9cdfd; color: var(--brand); transform: translateY(-1px); }
+
+    .button-primary { border-color: var(--brand); color: #fff; background: var(--brand); }
+    .button-primary:hover { color: #fff; background: var(--brand-strong); }
+
+    .intro {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
+      gap: 48px;
+      align-items: center;
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 56px 32px 40px;
+    }
+
+    .intro h1 {
+      max-width: 820px;
+      margin: 0;
+      font-size: clamp(36px, 5vw, 66px);
+      line-height: 1.06;
+      letter-spacing: -0.05em;
+    }
+
+    .intro p {
+      max-width: 720px;
+      margin: 22px 0 0;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.75;
+    }
+
+    .intro-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .install-card {
+      padding: 24px;
+      border: 1px solid #cbdcf4;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    .install-card strong { display: block; margin-bottom: 10px; font-size: 15px; }
+
+    .command {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 15px 16px;
+      border-radius: 10px;
+      color: #dceaff;
+      background: #101a2b;
+      font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .copy-command {
+      flex: 0 0 auto;
+      border: 0;
+      color: #8fbfff;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .install-note { margin: 12px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+    .demo-wrap {
+      max-width: 1560px;
+      margin: 0 auto;
+      padding: 16px 24px 72px;
+    }
+
+    .demo-heading {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin: 0 8px 18px;
+    }
+
+    .demo-heading h2 { margin: 0; font-size: 26px; letter-spacing: -0.025em; }
+    .demo-heading p { margin: 8px 0 0; color: var(--muted); }
+
+    .read-only {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--success);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .read-only::before {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      content: '';
+      box-shadow: 0 0 0 5px rgba(22, 163, 74, 0.1);
+    }
+
+    .workbench {
+      display: grid;
+      grid-template-columns: 240px minmax(540px, 1fr) 300px;
+      min-height: 650px;
+      overflow: hidden;
+      border: 1px solid #d7dee9;
+      border-radius: 16px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .sidebar, .workflow { padding: 20px; background: #fbfcfe; }
+    .sidebar { border-right: 1px solid var(--line); }
+    .workflow { border-left: 1px solid var(--line); }
+
+    .section-label {
+      margin: 0 0 16px;
+      color: #8a94a6;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .tree-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 8px;
+      color: #3d4655;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .tree-group::before { color: #f0a000; content: '▰'; }
+
+    .view-button {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      gap: 9px;
+      min-height: 38px;
+      margin: 4px 0;
+      padding: 0 12px 0 22px;
+      border: 0;
+      border-radius: 7px;
+      color: #566173;
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .view-button:hover { color: var(--brand); background: #f0f6ff; }
+    .view-button[aria-selected="true"] { color: #fff; background: var(--brand); }
+
+    .view-button::before { content: '▤'; opacity: 0.7; }
+
+    .sidebar-note {
+      margin-top: 24px;
+      padding: 14px;
+      border: 1px solid #dce7f5;
+      border-radius: 9px;
+      color: var(--muted);
+      background: #f5f9ff;
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .canvas { padding: 24px; background: var(--canvas); }
+
+    .canvas-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .canvas-head h3 { margin: 0; font-size: 20px; }
+    .path { color: #8490a2; font-size: 12px; }
+
+    .panel {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    .panel + .panel { margin-top: 16px; }
+
+    .search-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .form-item { display: flex; flex-direction: column; gap: 6px; }
+    .form-item label { color: var(--muted); font-size: 12px; }
+
+    .form-item input, .form-item select {
+      min-width: 170px;
+      height: 34px;
+      padding: 0 10px;
+      border: 1px solid #d9e0ea;
+      border-radius: 7px;
+      outline: none;
+      background: #fff;
+    }
+
+    .form-item input:focus, .form-item select:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.1); }
+    .search-actions { display: flex; gap: 8px; margin-left: auto; }
+
+    .small-button {
+      height: 34px;
+      padding: 0 15px;
+      border: 1px solid #d9e0ea;
+      border-radius: 7px;
+      color: #566173;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .small-button:hover { color: var(--brand); border-color: #afd0fc; }
+    .small-button.primary { color: #fff; border-color: var(--brand); background: var(--brand); }
+
+    .table-scroll { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td { padding: 11px 12px; border-bottom: 1px solid #edf0f5; text-align: left; white-space: nowrap; }
+    th { color: var(--muted); background: #fafbfd; font-weight: 650; }
+    tbody tr:hover td { background: #f8fbff; }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+    }
+
+    .tag.active { color: #128235; background: #e8f8ec; }
+    .tag.disabled { color: #7d8798; background: #f0f2f5; }
+    .text-action { border: 0; color: var(--brand); background: none; cursor: pointer; }
+
+    .empty-row { padding: 32px; color: #9aa4b3; text-align: center; }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px 28px;
+    }
+
+    .detail-item { min-width: 0; }
+    .detail-item dt { margin-bottom: 6px; color: var(--muted); font-size: 12px; }
+    .detail-item dd { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+    .detail-item.full { grid-column: 1 / -1; }
+
+    .prd-copy h4 { margin: 20px 0 10px; font-size: 16px; }
+    .prd-copy h4:first-child { margin-top: 0; }
+    .prd-copy p, .prd-copy li { color: #4f5969; line-height: 1.7; }
+    .prd-copy table { margin-top: 10px; }
+
+    mark {
+      padding: 2px 5px;
+      color: #b42318;
+      background: #fff0ed;
+      border-radius: 4px;
+    }
+
+    .impact {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-left: 3px solid var(--brand);
+      color: #3b4b60;
+      background: #f1f7ff;
+      line-height: 1.7;
+    }
+
+    .workflow-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 22px; }
+    .workflow-title strong { font-size: 15px; }
+    .agent-status { color: var(--success); font-size: 12px; }
+
+    .steps { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+
+    .step {
+      position: relative;
+      min-height: 92px;
+      padding: 2px 0 18px 44px;
+    }
+
+    .step:not(:last-child)::after {
+      position: absolute;
+      top: 32px;
+      bottom: 0;
+      left: 15px;
+      width: 1px;
+      background: #d7e0ed;
+      content: '';
+    }
+
+    .step-number {
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: grid;
+      width: 31px;
+      height: 31px;
+      place-items: center;
+      border-radius: 50%;
+      color: var(--brand);
+      background: var(--brand-soft);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .step strong { display: block; margin-bottom: 7px; font-size: 13px; }
+    .step p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+
+    .local-callout {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 10px;
+      color: #d8e7fb;
+      background: #142033;
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .local-callout strong { display: block; margin-bottom: 5px; color: #fff; font-size: 13px; }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .footer-note {
+      max-width: 1100px;
+      margin: 22px auto 0;
+      color: #788496;
+      font-size: 12px;
+      line-height: 1.7;
+      text-align: center;
+    }
+
+    @media (max-width: 1120px) {
+      .intro { grid-template-columns: 1fr; }
+      .workbench { grid-template-columns: 210px minmax(0, 1fr); }
+      .workflow {
+        grid-column: 1 / -1;
+        border-top: 1px solid var(--line);
+        border-left: 0;
+      }
+      .steps { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+      .step { min-height: 0; padding: 42px 0 0; }
+      .step:not(:last-child)::after { display: none; }
+    }
+
+    @media (max-width: 760px) {
+      .topbar { padding: 0 16px; }
+      .top-actions .button:first-child { display: none; }
+      .intro { gap: 28px; padding: 38px 18px 28px; }
+      .intro h1 { font-size: 39px; }
+      .intro p { font-size: 16px; }
+      .demo-wrap { padding: 12px 10px 48px; }
+      .demo-heading { align-items: start; flex-direction: column; }
+      .workbench { display: block; border-radius: 12px; }
+      .sidebar { border-right: 0; border-bottom: 1px solid var(--line); }
+      .tree-group, .sidebar-note, .section-label { display: none; }
+      .sidebar { display: flex; gap: 8px; padding: 12px; overflow-x: auto; }
+      .view-button {
+        width: auto;
+        flex: 0 0 auto;
+        margin: 0;
+        padding: 0 13px;
+        border: 1px solid var(--line);
+      }
+      .canvas { min-height: 580px; padding: 16px 12px; }
+      .canvas-head { align-items: start; flex-direction: column; }
+      .panel { padding: 14px; }
+      .search-actions { width: 100%; margin-left: 0; }
+      .detail-grid { grid-template-columns: 1fr; }
+      .detail-item.full { grid-column: auto; }
+      .workflow { padding: 18px; }
+      .steps { grid-template-columns: 1fr; }
+      .step { min-height: 82px; padding: 2px 0 16px 44px; }
+      .step:not(:last-child)::after { display: block; }
+      .install-card { padding: 18px; }
+      .command { align-items: flex-start; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="OpenPrototype 首页">
+      <span class="brand-mark">O</span>
+      <span>OpenPrototype</span>
+    </a>
+    <nav class="top-actions" aria-label="主要操作">
+      <a class="button" href="#demo">在线演示</a>
+      <a class="button button-primary" href="https://github.com/lightdoodleh/OpenPrototype">查看 GitHub</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="intro" aria-labelledby="page-title">
+      <div>
+        <h1 id="page-title">AI 改需求时，让 PRD、原型和 mock 数据始终一致。</h1>
+        <p>OpenPrototype 为会使用 AI 编码工具的 B 端产品经理提供一个受控闭环：当前页面与 PRD 自动进入上下文，只修改标出的增量，并在评审前运行红线检查。</p>
+        <div class="intro-actions">
+          <a class="button button-primary" href="#demo">立即体验只读 Demo</a>
+          <a class="button" href="https://github.com/lightdoodleh/OpenPrototype#readme">查看安装文档</a>
+        </div>
+      </div>
+      <aside class="install-card" aria-label="安装命令">
+        <strong>一分钟开始本地工作台</strong>
+        <div class="command">
+          <code id="installCommand">npx openprototype create myapp</code>
+          <button class="copy-command" id="copyCommand" type="button">复制</button>
+        </div>
+        <p class="install-note">在线版不调用 Agent、不写文件；安装本地版后才会启用 PRD 更新、文件修改与自动检查。</p>
+      </aside>
+    </section>
+
+    <section class="demo-wrap" id="demo" aria-labelledby="demo-title">
+      <div class="demo-heading">
+        <div>
+          <h2 id="demo-title">无需安装，先体验产品闭环</h2>
+          <p>切换页面、筛选客户、查看详情和 PRD 增量。所有数据都只存在于当前页面。</p>
+        </div>
+        <span class="read-only">只读在线演示</span>
+      </div>
+
+      <div class="workbench">
+        <aside class="sidebar" aria-label="原型页面导航">
+          <p class="section-label">Prototype pages</p>
+          <div class="tree-group">客户管理</div>
+          <button class="view-button" type="button" data-view="list" aria-selected="true">客户列表</button>
+          <button class="view-button" type="button" data-view="detail" aria-selected="false">客户详情</button>
+          <button class="view-button" type="button" data-view="prd" aria-selected="false">对应 PRD</button>
+          <div class="sidebar-note">本地版会自动扫描产品目录，并把每个 HTML 页面与同目录 PRD 配成一组。</div>
+        </aside>
+
+        <section class="canvas" aria-live="polite">
+          <div class="canvas-head">
+            <div>
+              <div class="path" id="viewPath">customer / customer_list.html</div>
+              <h3 id="viewTitle">客户列表</h3>
+            </div>
+            <span class="read-only">浏览模式</span>
+          </div>
+
+          <div class="view active" id="view-list">
+            <div class="panel">
+              <div class="search-form">
+                <div class="form-item">
+                  <label for="customerKeyword">客户名称</label>
+                  <input id="customerKeyword" type="search" placeholder="请输入客户名称">
+                </div>
+                <div class="form-item">
+                  <label for="customerStatus">状态</label>
+                  <select id="customerStatus"></select>
+                </div>
+                <div class="search-actions">
+                  <button class="small-button primary" id="searchCustomers" type="button">查询</button>
+                  <button class="small-button" id="resetCustomers" type="button">重置</button>
+                </div>
+              </div>
+            </div>
+            <div class="panel table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>编号</th>
+                    <th>客户名称</th>
+                    <th>联系人</th>
+                    <th>联系电话</th>
+                    <th>等级</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="customerRows"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="view" id="view-detail">
+            <div class="panel">
+              <dl class="detail-grid">
+                <div class="detail-item"><dt>客户编号</dt><dd id="detailId">000001</dd></div>
+                <div class="detail-item"><dt>客户名称</dt><dd id="detailName">示例科技有限公司</dd></div>
+                <div class="detail-item"><dt>联系人</dt><dd id="detailContact">张三</dd></div>
+                <div class="detail-item"><dt>联系电话</dt><dd id="detailPhone">13800000001</dd></div>
+                <div class="detail-item"><dt>客户等级</dt><dd id="detailLevel">A 类</dd></div>
+                <div class="detail-item"><dt>状态</dt><dd id="detailStatus"><span class="tag active">启用</span></dd></div>
+                <div class="detail-item full"><dt>备注</dt><dd>用于演示 B 端客户管理原型的只读数据。</dd></div>
+              </dl>
+            </div>
+          </div>
+
+          <div class="view" id="view-prd">
+            <article class="panel prd-copy">
+              <h4>客户列表 PRD</h4>
+              <p>右侧 Agent 在本地版中会自动携带当前页面和这份 PRD。未标红内容只作为背景，不进入本次修改范围。</p>
+              <h4>字段表</h4>
+              <table>
+                <thead><tr><th>字段</th><th>说明</th><th>必填</th></tr></thead>
+                <tbody>
+                  <tr><td>客户名称</td><td>支持模糊查询</td><td>否</td></tr>
+                  <tr><td>状态</td><td>启用 / 停用</td><td>否</td></tr>
+                  <tr><td><mark>客户等级</mark></td><td><mark>增加 C 类，并同步列表与详情</mark></td><td>否</td></tr>
+                </tbody>
+              </table>
+              <div class="impact"><strong>本次影响范围：</strong>PRD 字段表、列表等级显示、详情等级显示和 mock 数据枚举。Agent 不应重写其他交互。</div>
+            </article>
+          </div>
+        </section>
+
+        <aside class="workflow" aria-label="OpenPrototype 核心工作流">
+          <div class="workflow-title">
+            <strong>受控更新流程</strong>
+            <span class="agent-status">● Agent ready</span>
+          </div>
+          <ol class="steps">
+            <li class="step">
+              <span class="step-number">01</span>
+              <strong>标出需求增量</strong>
+              <p>在 PRD 里只标出本次要变的字段或规则。</p>
+            </li>
+            <li class="step">
+              <span class="step-number">02</span>
+              <strong>自动携带上下文</strong>
+              <p>Agent 同时获得当前 HTML、对应 PRD 和项目规范。</p>
+            </li>
+            <li class="step">
+              <span class="step-number">03</span>
+              <strong>同步相关文件</strong>
+              <p>页面、PRD 与 mock 数据按同一事实边界更新。</p>
+            </li>
+            <li class="step">
+              <span class="step-number">04</span>
+              <strong>运行红线检查</strong>
+              <p>静态规则与浏览器冒烟在评审前暴露偏差。</p>
+            </li>
+          </ol>
+          <div class="local-callout">
+            <strong>为什么在线版不直接运行 Agent？</strong>
+            OpenPrototype 默认只在本机工作，文件修改和 Agent 接口不开放到公网。这份页面只用于零安装体验。
+          </div>
+        </aside>
+      </div>
+
+      <p class="footer-note">OpenPrototype 是 MIT 许可的开源项目。在线演示不收集输入、不持久化示例数据，也不会连接本机或云端模型。</p>
+    </section>
+  </main>
+
+  <script>
+    const STATUS_OPTIONS = [
+      { value: '', label: '全部' },
+      { value: 'active', label: '启用' },
+      { value: 'disabled', label: '停用' }
+    ];
+    const STATUS_LABELS = { active: '启用', disabled: '停用' };
+    const LEVEL_LABELS = { A: 'A 类', B: 'B 类', C: 'C 类' };
+    const CUSTOMERS = [
+      { id: '000001', name: '示例科技有限公司', contact: '张三', phone: '13800000001', level: 'A', status: 'active' },
+      { id: '000002', name: '样板医疗器械公司', contact: '李四', phone: '13800000002', level: 'B', status: 'active' },
+      { id: '000003', name: '演示健康管理集团', contact: '王五', phone: '13800000003', level: 'C', status: 'disabled' }
+    ];
+    const VIEW_META = {
+      list: { title: '客户列表', path: 'customer / customer_list.html' },
+      detail: { title: '客户详情', path: 'customer / customer_detail.html?mode=view' },
+      prd: { title: '客户列表 PRD', path: 'customer / customer_list.md' }
+    };
+
+    const rows = document.getElementById('customerRows');
+    const keyword = document.getElementById('customerKeyword');
+    const status = document.getElementById('customerStatus');
+    const viewTitle = document.getElementById('viewTitle');
+    const viewPath = document.getElementById('viewPath');
+
+    STATUS_OPTIONS.forEach(item => {
+      const option = document.createElement('option');
+      option.value = item.value;
+      option.textContent = item.label;
+      status.appendChild(option);
+    });
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function renderRows(items) {
+      rows.replaceChildren();
+      if (!items.length) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.className = 'empty-row';
+        td.colSpan = 7;
+        td.textContent = '没有符合条件的客户';
+        tr.appendChild(td);
+        rows.appendChild(tr);
+        return;
+      }
+
+      items.forEach(customer => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = [
+          `<td>${escapeHtml(customer.id)}</td>`,
+          `<td>${escapeHtml(customer.name)}</td>`,
+          `<td>${escapeHtml(customer.contact)}</td>`,
+          `<td>${escapeHtml(customer.phone)}</td>`,
+          `<td>${escapeHtml(LEVEL_LABELS[customer.level])}</td>`,
+          `<td><span class="tag ${escapeHtml(customer.status)}">${escapeHtml(STATUS_LABELS[customer.status])}</span></td>`,
+          `<td><button class="text-action" type="button" data-customer-id="${escapeHtml(customer.id)}">查看</button></td>`
+        ].join('');
+        rows.appendChild(tr);
+      });
+    }
+
+    function filterCustomers() {
+      const term = keyword.value.trim().toLowerCase();
+      const selectedStatus = status.value;
+      const filtered = CUSTOMERS.filter(customer => {
+        const matchesTerm = !term || customer.name.toLowerCase().includes(term) || customer.contact.toLowerCase().includes(term);
+        const matchesStatus = !selectedStatus || customer.status === selectedStatus;
+        return matchesTerm && matchesStatus;
+      });
+      renderRows(filtered);
+    }
+
+    function setDetail(customer) {
+      document.getElementById('detailId').textContent = customer.id;
+      document.getElementById('detailName').textContent = customer.name;
+      document.getElementById('detailContact').textContent = customer.contact;
+      document.getElementById('detailPhone').textContent = customer.phone;
+      document.getElementById('detailLevel').textContent = LEVEL_LABELS[customer.level];
+      const statusCell = document.getElementById('detailStatus');
+      statusCell.replaceChildren();
+      const tag = document.createElement('span');
+      tag.className = `tag ${customer.status}`;
+      tag.textContent = STATUS_LABELS[customer.status];
+      statusCell.appendChild(tag);
+    }
+
+    function switchView(name) {
+      document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.id === `view-${name}`));
+      document.querySelectorAll('.view-button').forEach(button => button.setAttribute('aria-selected', String(button.dataset.view === name)));
+      viewTitle.textContent = VIEW_META[name].title;
+      viewPath.textContent = VIEW_META[name].path;
+    }
+
+    document.querySelectorAll('.view-button').forEach(button => {
+      button.addEventListener('click', () => switchView(button.dataset.view));
+    });
+
+    rows.addEventListener('click', event => {
+      const button = event.target.closest('[data-customer-id]');
+      if (!button) return;
+      const customer = CUSTOMERS.find(item => item.id === button.dataset.customerId);
+      if (!customer) return;
+      setDetail(customer);
+      switchView('detail');
+    });
+
+    document.getElementById('searchCustomers').addEventListener('click', filterCustomers);
+    document.getElementById('resetCustomers').addEventListener('click', () => {
+      keyword.value = '';
+      status.value = '';
+      renderRows(CUSTOMERS);
+    });
+    keyword.addEventListener('keydown', event => {
+      if (event.key === 'Enter') filterCustomers();
+    });
+
+    document.getElementById('copyCommand').addEventListener('click', async event => {
+      const button = event.currentTarget;
+      try {
+        await navigator.clipboard.writeText(document.getElementById('installCommand').textContent);
+        button.textContent = '已复制';
+        window.setTimeout(() => { button.textContent = '复制'; }, 1600);
+      } catch {
+        button.textContent = '请手动复制';
+      }
+    });
+
+    renderRows(CUSTOMERS);
+  </script>
+</body>
+</html>

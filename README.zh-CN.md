@@ -1,28 +1,39 @@
 <div align="center">
 
-# OpenPrototype
+<h1>OpenPrototype</h1>
 
-[English](README.md) | **简体中文**
+<p><a href="README.md">English</a> | <strong>简体中文</strong></p>
 
-**本地原型工作台 —— 左侧树形导航 · 中间原型预览 · 右侧 AI Agent**
+<h2>AI 改需求时，让 PRD、HTML 原型和 mock 数据始终一致。</h2>
 
-让产品经理把「需求 → PRD → HTML 原型」跑成一个闭环，AI 就坐在原型旁边按 PRD 改页面。
+<p>OpenPrototype 是面向技术型产品经理和小型产品团队的本地工作台。它把当前页面和对应 PRD 自动交给 Agent，只执行你标出的需求增量，并在评审前检查结果。</p>
 
-*A local prototyping workbench: navigation tree · live preview · an AI agent that edits your HTML prototypes against their PRD.*
-
-![License](https://img.shields.io/badge/license-MIT-blue)
-![Node Core](https://img.shields.io/badge/node_core-%3E%3D16-brightgreen)
-![PRs Welcome](https://img.shields.io/badge/PRs-welcome-orange)
-![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)
+<p>
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT 许可证">
+  <img src="https://img.shields.io/badge/node_core-%3E%3D16-brightgreen" alt="Node.js 16 或更高版本">
+  <img src="https://img.shields.io/badge/PRs-welcome-orange" alt="欢迎提交 Pull Request">
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey" alt="macOS、Windows 与 Linux">
+</p>
 
 </div>
 
-<table>
-  <tr>
-    <td><img src="image/README/workbench-overview.png" alt="openprototype workbench preview" width="440"></td>
-    <td><img src="image/README/workbench-prd.png" alt="openprototype workbench prd preview" width="440"></td>
-  </tr>
-</table>
+<p align="center">
+  <img src="image/README/core-loop.gif" alt="标出 PRD 增量、精准更新相关文件、同步原型与 mock 数据并通过红线检查" width="100%">
+</p>
+
+<p align="center">
+  <a href="https://lightdoodleh.github.io/OpenPrototype/"><strong>在线体验只读 Demo</strong></a>
+  ·
+  <a href="https://github.com/lightdoodleh/OpenPrototype/issues">提交反馈</a>
+</p>
+
+```bash
+npx openprototype create myapp
+cd myapp
+npm install
+```
+
+**核心闭环：**标出 PRD 增量 → Agent 更新相关文件 → 预览真实交互 → 运行红线检查。
 
 
 ## 为什么要有它
@@ -33,13 +44,13 @@
 - **AI 会写代码，但不懂你的规矩** —— 直接让通用 AI 改原型，它会整页重写、命名混乱、把状态文案写死、破坏既有交互。
 - **评审时页面散落各处** —— 几十个原型页没有统一入口，找页面、对版本靠记忆。
 
-`openprototype` 把这三件事收进**一个本地工作台**：
+`openprototype` 把这三件事收进**一个受控闭环**：
 
 1. **PRD（`.md`）和原型（`.html`）同目录并排放**，一处浏览、一处对齐。
 2. **右侧 AI Agent 自动携带「当前页面 + 当前 PRD」上下文**，你说"把某字段改成 XX"，它只改相关部分、不整页重写；还能识别 PRD 里**标红**的增量改动精准落地。
 3. **内置红线检查器**覆盖脚本顺序、数据层、状态常量化、字体栈与 `mode=view` 物理隐藏；配套 `auto-test` skill 会要求 Agent 在改完原型后执行检查。
 
-> 一句话：**给"PM + AI 做原型"这件事，配一套有护栏的本地工作台。**
+> 一句话：**让 AI 快速改原型，同时不让 PRD、页面和 mock 数据互相漂移。**
 
 ---
 
@@ -59,7 +70,7 @@
 ## 🎯 适合谁 / 使用场景
 
 **适合**
-- **B 端 / 中后台产品经理**：需要快速做高保真、可交互原型，并让 PRD 与原型始终一致。
+- **会使用 AI 编码工具的 B 端 / 中后台产品经理**：需要快速做可交互原型，又不希望需求、页面和数据越改越散。
 - **小团队 / 独立开发**：想用 AI 加速原型迭代，又不希望 AI 每次乱改、风格漂移。
 - **需要沉淀规范的团队**：把自己的 PRD 模板、UI 规范放进 `rules/`，让 AI 按你的标准产出。
 
