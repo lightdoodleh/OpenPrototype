@@ -35,8 +35,16 @@ let chromium;
 try {
   ({ chromium } = require('playwright'));
 } catch {
-  console.error('\n⚠️  未安装 playwright，跳过运行时冒烟测试。');
-  console.error('   安装：npm install   然后  npx playwright install chromium\n');
+  const result = {
+    scanned: 0,
+    errors: [],
+    warns: [{ file: '-', rule: '环境', msg: 'Playwright 未安装，已跳过运行时层；安装：npm i -D playwright && npx playwright install chromium' }]
+  };
+  if (process.argv.includes('--json')) process.stdout.write(JSON.stringify(result));
+  else {
+    console.error('\n⚠️  未安装 Playwright，跳过运行时冒烟测试。');
+    console.error('   安装：npm i -D playwright && npx playwright install chromium\n');
+  }
   process.exit(0);
 }
 

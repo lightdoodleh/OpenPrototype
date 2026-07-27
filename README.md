@@ -1,28 +1,39 @@
 <div align="center">
 
-# OpenPrototype
+<h1>OpenPrototype</h1>
 
-**English** | [简体中文](README.zh-CN.md)
+<p><strong>English</strong> | <a href="README.zh-CN.md">简体中文</a></p>
 
-**A local prototyping workbench — navigation tree on the left · live preview in the middle · an AI Agent on the right**
+<h2>Keep PRDs, HTML prototypes, and mock data in sync while AI edits them.</h2>
 
-Let product managers run "requirements → PRD → HTML prototype" as a single closed loop, with the AI sitting right next to the prototype and editing pages against their PRD.
+<p>OpenPrototype is a local workbench for technical PMs and small product teams. It gives the Agent the current page and its PRD, applies only the requirement delta you marked, and checks the result before review.</p>
 
-*A local prototyping workbench: navigation tree · live preview · an AI agent that edits your HTML prototypes against their PRD.*
-
-![License](https://img.shields.io/badge/license-MIT-blue)
-![Node Core](https://img.shields.io/badge/node_core-%3E%3D16-brightgreen)
-![PRs Welcome](https://img.shields.io/badge/PRs-welcome-orange)
-![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)
+<p>
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license">
+  <img src="https://img.shields.io/badge/node_core-%3E%3D16-brightgreen" alt="Node.js 16 or later">
+  <img src="https://img.shields.io/badge/PRs-welcome-orange" alt="Pull requests welcome">
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey" alt="macOS, Windows and Linux">
+</p>
 
 </div>
 
-<table>
-  <tr>
-    <td><img src="image/README/workbench-overview.png" alt="openprototype workbench preview" width="440"></td>
-    <td><img src="image/README/workbench-prd.png" alt="openprototype workbench prd preview" width="440"></td>
-  </tr>
-</table>
+<p align="center">
+  <img src="image/README/core-loop.gif" alt="Mark a PRD change, apply only the delta, keep the prototype and mock data aligned, then verify with guardrails" width="100%">
+</p>
+
+<p align="center">
+  <a href="https://lightdoodleh.github.io/OpenPrototype/"><strong>Try the read-only demo</strong></a>
+  ·
+  <a href="https://github.com/lightdoodleh/OpenPrototype/issues">Share feedback</a>
+</p>
+
+```bash
+npx openprototype create myapp
+cd myapp
+npm install
+```
+
+**The loop:** mark the PRD change → let the Agent update the relevant files → preview the real interaction → run the guardrail checks.
 
 
 ## Why it exists
@@ -33,13 +44,13 @@ The recurring pain points when a PM builds prototypes:
 - **AI can write code, but doesn't know your rules** — hand a prototype to a general-purpose AI and it rewrites whole pages, names things inconsistently, hardcodes status labels, and breaks existing interactions.
 - **Pages are scattered at review time** — dozens of prototype pages with no unified entry point; you find pages and track versions from memory.
 
-`openprototype` folds these three things into **one local workbench**:
+`openprototype` folds these three things into **one controlled loop**:
 
 1. **PRD (`.md`) and prototype (`.html`) sit side by side in the same directory** — browse in one place, keep them aligned in one place.
 2. **The AI Agent on the right automatically carries "current page + current PRD" context.** Say "change field X to XX" and it edits only the relevant part instead of rewriting the whole page; it can also pick up the **red-marked** incremental changes in the PRD and land them precisely.
 3. **A built-in red-line checker** covers script order, the data layer, status constants, the font stack, and `mode=view` physical hiding. The companion `auto-test` skill tells the Agent to run it after prototype edits.
 
-> In one sentence: **a local workbench with guardrails, built for "PM + AI prototyping."**
+> In one sentence: **AI can move fast without letting the PRD, prototype, and mock data drift apart.**
 
 ---
 
@@ -59,7 +70,7 @@ The recurring pain points when a PM builds prototypes:
 ## 🎯 Who it's for / Use cases
 
 **A good fit for**
-- **B2B / back-office product managers**: need to quickly build high-fidelity, interactive prototypes and keep the PRD and prototype always in sync.
+- **Technical B2B / back-office product managers**: already use AI coding tools and need interactive prototypes without letting requirements and pages drift apart.
 - **Small teams / solo developers**: want AI to speed up prototype iteration without letting it rewrite things randomly or drift in style.
 - **Teams that want to codify their standards**: put your own PRD templates and UI guidelines into `rules/` and have the AI produce work to your standard.
 
