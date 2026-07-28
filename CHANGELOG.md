@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0](https://github.com/lightdoodleh/OpenPrototype/compare/v1.2.0...v1.3.0) (2026-07-27)
+
+
+### Features
+
+* complete project discovery entrypoints ([ab58b14](https://github.com/lightdoodleh/OpenPrototype/commit/ab58b1426d91a0d720173e107166268a05463718))
+
+
+### Bug Fixes
+
+* mirror PRD and Agent demo surfaces ([e3a735c](https://github.com/lightdoodleh/OpenPrototype/commit/e3a735c19e69b8314d674763ace941185df71b5c))
+
 ## [1.2.0](https://github.com/lightdoodleh/OpenPrototype/compare/v1.1.0...v1.2.0) (2026-07-27)
 
 
