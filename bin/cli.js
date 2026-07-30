@@ -13,6 +13,7 @@
  *   openprototype nav:sync              重建各产品 nav-tree.json
  *   openprototype doctor                体检：Node / OpenCode / 配置 / Playwright
  *   openprototype update                提示如何更新框架（运行时随 npm，可编辑资产按需覆盖）
+ *   openprototype --version             查看当前版本号
  */
 
 const fs = require('fs');
@@ -311,7 +312,7 @@ function cmdAddProduct(argv) {
   const config = loadOrInitConfig(root);
   config.products = config.products || [];
   if (!config.products.some((p) => p.id === id)) {
-    config.products.push({ id, roots: ['pc'] });
+    config.products.push({ id, roots: ['pc'], lanAddress: '' });
     saveConfig(root, config);
     ok(`已在 ${CONFIG_FILENAME} 注册产品 ${id}`);
   } else info(C.dim(`  产品 ${id} 已在配置中`));
@@ -470,6 +471,12 @@ function cmdUpdate() {
   info(C.dim('  （建议先 git commit，再用 diff 工具挑选要更新的内容，保护你的本地改动）\n'));
 }
 
+function cmdVersion() {
+  const pkg = readJson(path.join(PKG_ROOT, 'package.json'), {});
+  if (!pkg.version) die('无法读取 openprototype 版本号');
+  info(pkg.version);
+}
+
 // ── 入口 ────────────────────────────────────────────────
 function help() {
   info(`
@@ -485,6 +492,7 @@ ${C.b('openprototype')} — 本地原型工作台脚手架
   ${C.g('openprototype nav:sync')}           重建各产品 nav-tree.json
   ${C.g('openprototype doctor')}             体检（Node / OpenCode / 配置 / Playwright）
   ${C.g('openprototype update')}             如何更新框架
+  ${C.g('openprototype --version')}          查看当前版本号（也可使用 -v 或 version）
 `);
 }
 
@@ -501,6 +509,9 @@ async function main() {
     case 'nav-sync': return runNode('scripts/check/sync-nav-tree.js', argv);
     case 'doctor': return cmdDoctor();
     case 'update': return cmdUpdate();
+    case '-v':
+    case '--version':
+    case 'version': return cmdVersion();
     case undefined:
     case '-h':
     case '--help':

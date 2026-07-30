@@ -136,6 +136,17 @@ function requireLoopback(req, res) {
   return false;
 }
 
+function handleLanAddress(req, res) {
+  const requestUrl = new URL(req.url, 'http://localhost');
+  const productId = String(requestUrl.searchParams.get('productId') || '').trim();
+  const product = CONFIG.products.find((item) => item.id === productId);
+  if (!product) return sendJson(res, 404, { ok: false, error: '未找到对应产品的局域网地址配置' });
+  return sendJson(res, 200, {
+    ok: true,
+    lanAddress: typeof product.lanAddress === 'string' ? product.lanAddress.trim() : ''
+  });
+}
+
 // ── PRD 保存 ───────────────────────────────────────────
 function handleSavePrd(req, res) {
   readJsonBody(req, 5 * 1024 * 1024, (parseErr, data) => {
@@ -942,6 +953,10 @@ const server = http.createServer(async (req, res) => {
       port: PORT,
       startedAt: STARTED_AT
     });
+  }
+
+  if (req.method === 'GET' && urlPath === '/api/lan-address') {
+    return handleLanAddress(req, res);
   }
 
   if (await handleAgentApi(req, res, urlPath)) return;

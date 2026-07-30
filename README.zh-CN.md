@@ -150,6 +150,7 @@ npx openprototype service uninstall
 - **自动带上下文**：点左侧任一页面，面板顶部就显示「本条消息将携带：页面 X / PRD Y」，无需你手动贴路径。
 - **按 PRD 标红增量更新**：一键把 PRD 里 `<span style="color:red">…</span>` 标红的内容作为**唯一改动范围**发给 Agent —— 只改标红处，未标红的历史内容当背景，不重写、不"顺手优化"。
 - **默认仅本机访问**：服务器默认只监听 `127.0.0.1`；所有写入与 Agent 接口（`/api/*`）只接受本机请求。
+- **发布态不提供创建能力**：产品壳仅在确认连接到本机 openprototype 服务后显示“新建文件夹 / 新建页面”及目录内新增入口；发布到 SVN 等静态地址后，这些入口和创建弹窗不会进入页面 DOM。
 - **局域网开放边界**：使用 `--host 0.0.0.0` 后，局域网设备虽然不能调用写入与 Agent 接口，但能读取项目根目录下服务器可访问的非隐藏文件，不仅是原型页面。只应在可信网络和专用原型项目中使用，并确保项目中没有密钥或其他敏感文件。
 
 ### 安装 OpenCode（AI 面板前置）
@@ -247,12 +248,17 @@ npx playwright install chromium
     "startTimeoutMs": 15000
   },
   "products": [
-    { "id": "demo", "roots": ["pc"] }
+    {
+      "id": "demo",
+      "roots": ["pc"],
+      "lanAddress": "http://192.168.1.23:8082/product/demo/pc/index.html"
+    }
   ]
 }
 ```
 
 `host` 默认为 `127.0.0.1`。设为 `0.0.0.0` 会向局域网开放静态文件读取，请先阅读上面的安全边界；长期运行的常驻服务还需显式执行 `npx openprototype service install --allow-lan`。
+产品导航中的“复制局域网地址”会原样复制该产品的 `lanAddress`；地址由引用 openprototype 的业务配置，框架不会根据当前浏览器地址自动推断。修改后，常驻服务需执行一次 `npx openprototype service restart`。
 
 环境变量可临时覆盖：`PROTO_KIT_PORT` · `PROTO_KIT_HOST` · `OPENCODE_BIN` · `OPENCODE_MODEL` · `OPENCODE_PORT`。
 也可用 `npx openprototype serve --port 9000 --host 0.0.0.0` 临时指定端口 / 监听地址。
@@ -273,6 +279,7 @@ npx playwright install chromium
 | `npx openprototype check [--changed] [--static-only] [路径]` | 检查全部、Git 改动或指定范围；可只跑静态规则 |
 | `npx openprototype nav:sync` | 扫描产品目录并重建 `nav-tree.json` |
 | `npx openprototype doctor` | 体检 Node / OpenCode / 配置 / Playwright / 常驻服务 |
+| `npx openprototype --version` | 查看当前安装的 openprototype 版本号（也可使用 `-v` 或 `version`） |
 | `npm update openprototype` | 按 `package.json` 的版本范围升级框架运行时包 |
 | `npx openprototype update` | 仅打印可编辑资产的手工对比与合并指引，不执行升级 |
 
