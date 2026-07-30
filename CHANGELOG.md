@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.0](https://github.com/lightdoodleh/OpenPrototype/compare/v1.4.0...v1.5.0) (2026-07-30)
+
+
+### Features
+
+* add version command to CLI and update package version to 1.4.0 ([c5a8b23](https://github.com/lightdoodleh/OpenPrototype/commit/c5a8b23768330e34185a1a30cef3ec88edbb5f22))
+
+
+### Bug Fixes
+
+* version ([6a35171](https://github.com/lightdoodleh/OpenPrototype/commit/6a351718cdb448baaa5e47095743f2bae936cb8f))
+
 ## [1.4.0](https://github.com/lightdoodleh/OpenPrototype/compare/v1.3.0...v1.4.0) (2026-07-30)
 
 
