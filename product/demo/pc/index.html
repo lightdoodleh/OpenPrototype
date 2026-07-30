@@ -1467,7 +1467,8 @@ function copyText(text, successMsg) {
 
 async function loadLanAddress() {
   const productId = window.PROTO_KIT && window.PROTO_KIT.productId;
-  const params = new URLSearchParams({ productId: productId || '' });
+  const surface = PAGE_BASE.split('/').filter(Boolean).pop() || '';
+  const params = new URLSearchParams({ productId: productId || '', surface });
   const res = await fetch('/api/lan-address?' + params.toString(), { cache: 'no-store' });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.ok) throw new Error(data.error || '局域网地址读取失败');
@@ -1537,7 +1538,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     try {
       const lanAddress = await loadLanAddress();
       if (!lanAddress) {
-        showToast('请先在 proto-kit.config.json 配置该产品的 lanAddress');
+        showToast('请先在 proto-kit.config.json 配置该产品当前端的 lanAddress');
         return;
       }
       copyText(lanAddress, '局域网地址已复制到剪贴板');

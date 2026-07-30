@@ -250,15 +250,18 @@ npx playwright install chromium
   "products": [
     {
       "id": "demo",
-      "roots": ["pc"],
-      "lanAddress": "http://192.168.1.23:8082/product/demo/pc/index.html"
+      "roots": ["pc", "h5"],
+      "lanAddress": {
+        "pc": "http://192.168.1.23:8082/product/demo/pc/index.html",
+        "h5": "http://192.168.1.23:8082/product/demo/h5/index.html"
+      }
     }
   ]
 }
 ```
 
 `host` 默认为 `127.0.0.1`。设为 `0.0.0.0` 会向局域网开放静态文件读取，请先阅读上面的安全边界；长期运行的常驻服务还需显式执行 `npx openprototype service install --allow-lan`。
-产品导航中的“复制局域网地址”会原样复制该产品的 `lanAddress`；地址由引用 openprototype 的业务配置，框架不会根据当前浏览器地址自动推断。修改后，常驻服务需执行一次 `npx openprototype service restart`。
+产品导航中的“复制局域网地址”会按当前端读取该产品 `lanAddress` 下的同名配置；例如 PC 端读取 `lanAddress.pc`，H5 端读取 `lanAddress.h5`。旧版字符串写法仍兼容，表示该产品所有端共用一个地址。地址由引用 openprototype 的业务配置，框架不会根据当前浏览器地址自动推断。修改后，常驻服务需执行一次 `npx openprototype service restart`。
 
 环境变量可临时覆盖：`PROTO_KIT_PORT` · `PROTO_KIT_HOST` · `OPENCODE_BIN` · `OPENCODE_MODEL` · `OPENCODE_PORT`。
 也可用 `npx openprototype serve --port 9000 --host 0.0.0.0` 临时指定端口 / 监听地址。

@@ -2,6 +2,7 @@
 'use strict';
 
 const fs = require('fs');
+const http = require('http');
 const net = require('net');
 const os = require('os');
 const path = require('path');
@@ -57,6 +58,21 @@ function status(projectRoot) {
   return JSON.parse(result.stdout);
 }
 
+function getJson(port, pathname, headers) {
+  return new Promise((resolve, reject) => {
+    const req = http.get({ host: '127.0.0.1', port, path: pathname, headers }, (res) => {
+      let body = '';
+      res.setEncoding('utf8');
+      res.on('data', (chunk) => { body += chunk; });
+      res.on('end', () => {
+        try { resolve({ status: res.statusCode, body: JSON.parse(body) }); }
+        catch (err) { reject(new Error(`接口返回不是 JSON：${body || err.message}`)); }
+      });
+    });
+    req.on('error', reject);
+  });
+}
+
 async function waitFor(projectRoot, predicate, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   let current;
@@ -105,7 +121,14 @@ async function main() {
       port,
       host: '127.0.0.1',
       service: { autoInstall: true },
-      products: []
+      products: [{
+        id: 'demo',
+        roots: ['pc', 'h5'],
+        lanAddress: {
+          pc: 'http://192.168.1.23/example/pc',
+          h5: 'http://192.168.1.23/example/h5'
+        }
+      }]
     }, null, 2) + '\n');
 
     const installResult = npm(['install', '--foreground-scripts'], projectRoot, {
@@ -117,6 +140,17 @@ async function main() {
 
     const initial = await waitFor(projectRoot, (item) => item.running, 20000);
     if (!initial.registered || initial.port !== port || !initial.pid) throw new Error('自动安装后的服务状态不完整');
+
+    const pcAddress = await getJson(port, '/api/lan-address?productId=demo&surface=pc');
+    if (pcAddress.status !== 200 || pcAddress.body.lanAddress !== 'http://192.168.1.23/example/pc') {
+      throw new Error(`PC 局域网地址不正确：${JSON.stringify(pcAddress)}`);
+    }
+    const h5Address = await getJson(port, '/api/lan-address?productId=demo', {
+      Referer: `http://127.0.0.1:${port}/product/demo/h5/index.html`
+    });
+    if (h5Address.status !== 200 || h5Address.body.lanAddress !== 'http://192.168.1.23/example/h5') {
+      throw new Error(`H5 局域网地址不正确：${JSON.stringify(h5Address)}`);
+    }
 
     process.kill(initial.pid, 'SIGKILL');
     const restarted = await waitFor(projectRoot, (item) => item.running && item.pid !== initial.pid, process.platform === 'win32' ? 90000 : 30000);
