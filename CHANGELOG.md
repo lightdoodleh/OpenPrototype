@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.0](https://github.com/lightdoodleh/OpenPrototype/compare/v1.5.0...v1.6.0) (2026-07-30)
+
+
+### Features
+
+* support per-surface LAN addresses ([3156bc1](https://github.com/lightdoodleh/OpenPrototype/commit/3156bc1b4237761c02750ca0ca59134ac618b18e))
+* support per-surface LAN addresses ([#23](https://github.com/lightdoodleh/OpenPrototype/issues/23)) ([ae9af02](https://github.com/lightdoodleh/OpenPrototype/commit/ae9af020c90864ab509951c9841584e736ad287e))
+
 ## [1.5.0](https://github.com/lightdoodleh/OpenPrototype/compare/v1.4.0...v1.5.0) (2026-07-30)
 
 
