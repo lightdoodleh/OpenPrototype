@@ -553,7 +553,7 @@ body.is-resizing-sidebar .preview-frame {
   <div class="sidebar-header">
     <div class="sidebar-title-row">
       <div class="sidebar-title">Demo 原型导航</div>
-      <button class="copy-address-btn" id="copyAddressBtn" type="button">复制地址</button>
+      <button class="copy-address-btn" id="copyAddressBtn" type="button">复制局域网地址</button>
     </div>
     <div class="version-row">
       <span class="version-label">版本</span>
@@ -577,8 +577,8 @@ body.is-resizing-sidebar .preview-frame {
       </label>
       <button class="btn" id="expandAllBtn">全部展开</button>
       <button class="btn" id="collapseAllBtn">全部折叠</button>
-      <button class="btn" id="newFolderBtn">新建文件夹</button>
-      <button class="btn" id="newPageBtn">新建页面</button>
+      <button class="btn" id="newFolderBtn" hidden>新建文件夹</button>
+      <button class="btn" id="newPageBtn" hidden>新建页面</button>
     </div>
   </div>
 
@@ -638,8 +638,31 @@ const VERSION_KEY = NAV_NS + '-version';
 const VERSION_HISTORY_KEY = NAV_NS + '-version-history';
 const REVIEW_KEY = NAV_NS + '-review-status';
 const SIDEBAR_WIDTH_KEY = NAV_NS + '-sidebar-width';
-// 复制当前页面地址（供分享本地/局域网预览地址）
 const navStorage = window['localStorage'];
+let localEditingEnabled = false;
+
+async function detectLocalEditing() {
+  try {
+    const res = await fetch('/api/health', { cache: 'no-store' });
+    const data = await res.json().catch(() => ({}));
+    return res.ok && data.ok === true && typeof data.version === 'string' && Number.isFinite(data.port);
+  } catch {
+    return false;
+  }
+}
+
+function applyLocalEditingState() {
+  const createControls = ['newFolderBtn', 'newPageBtn']
+    .map(id => document.getElementById(id))
+    .filter(Boolean);
+  if (localEditingEnabled) {
+    createControls.forEach(control => { control.hidden = false; });
+    return;
+  }
+  createControls.forEach(control => control.remove());
+  const createModal = document.getElementById('createModalMask');
+  if (createModal) createModal.remove();
+}
 
 function loadReviewStatus() {
   try { return JSON.parse(navStorage.getItem(REVIEW_KEY) || '{}'); } catch { return {}; }
@@ -1289,7 +1312,10 @@ function renderNodes(nodes, depth, trail) {
       const head = document.createElement('div');
       head.className = 'folder-head';
       setupTreeDrag(head, trail, navNodeKey(node), folderKey);
-      head.innerHTML = `<span class="folder-arrow">${I_ARROW}</span><span class="folder-icon">${I_FOLDER}</span><span class="folder-name">${node.name}</span><button type="button" class="tree-add-btn" data-create="page" title="在此文件夹新建页面">＋页</button><button type="button" class="tree-add-btn" data-create="folder" title="在此文件夹新建子文件夹">＋夹</button>`;
+      const createActions = localEditingEnabled
+        ? '<button type="button" class="tree-add-btn" data-create="page" title="在此文件夹新建页面">＋页</button><button type="button" class="tree-add-btn" data-create="folder" title="在此文件夹新建子文件夹">＋夹</button>'
+        : '';
+      head.innerHTML = `<span class="folder-arrow">${I_ARROW}</span><span class="folder-icon">${I_FOLDER}</span><span class="folder-name">${node.name}</span>${createActions}`;
       head.addEventListener('click', () => {
         if (Date.now() >= suppressTreeClickUntil) folder.classList.toggle('collapsed');
       });
@@ -1439,11 +1465,22 @@ function copyText(text, successMsg) {
     });
 }
 
+async function loadLanAddress() {
+  const productId = window.PROTO_KIT && window.PROTO_KIT.productId;
+  const params = new URLSearchParams({ productId: productId || '' });
+  const res = await fetch('/api/lan-address?' + params.toString(), { cache: 'no-store' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) throw new Error(data.error || '局域网地址读取失败');
+  return String(data.lanAddress || '').trim();
+}
+
 // ─────────────────────────────────────────────
 //  Init
 // ─────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   initSidebarResize();
+  localEditingEnabled = await detectLocalEditing();
+  applyLocalEditingState();
   try {
     await loadTree();
   } catch (e) {
@@ -1496,24 +1533,32 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('collapseAllBtn').addEventListener('click', () => {
     treeWrap.querySelectorAll('.folder').forEach(f => f.classList.add('collapsed'));
   });
-  document.getElementById('copyAddressBtn').addEventListener('click', () => {
-    copyText(window.location.href, '本页地址已复制到剪贴板');
+  document.getElementById('copyAddressBtn').addEventListener('click', async () => {
+    try {
+      const lanAddress = await loadLanAddress();
+      if (!lanAddress) {
+        showToast('请先在 proto-kit.config.json 配置该产品的 lanAddress');
+        return;
+      }
+      copyText(lanAddress, '局域网地址已复制到剪贴板');
+    } catch (err) {
+      showToast(err.message || '局域网地址读取失败');
+    }
   });
 
-  // 新建文件夹 / 页面
-  document.getElementById('newFolderBtn').addEventListener('click', () => openCreateModal('folder', ''));
-  document.getElementById('newPageBtn').addEventListener('click', () => openCreateModal('page', ''));
-  document.getElementById('createCancelBtn').addEventListener('click', closeCreateModal);
-  document.getElementById('createConfirmBtn').addEventListener('click', submitCreateModal);
-  document.getElementById('createModalMask').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeCreateModal();
-  });
-  [document.getElementById('createNameInput')].forEach(input => {
-    input.addEventListener('keydown', e => {
+  if (localEditingEnabled) {
+    document.getElementById('newFolderBtn').addEventListener('click', () => openCreateModal('folder', ''));
+    document.getElementById('newPageBtn').addEventListener('click', () => openCreateModal('page', ''));
+    document.getElementById('createCancelBtn').addEventListener('click', closeCreateModal);
+    document.getElementById('createConfirmBtn').addEventListener('click', submitCreateModal);
+    document.getElementById('createModalMask').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeCreateModal();
+    });
+    document.getElementById('createNameInput').addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); submitCreateModal(); }
       else if (e.key === 'Escape') closeCreateModal();
     });
-  });
+  }
 
 });
 </script>

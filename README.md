@@ -150,6 +150,7 @@ You type in the panel  ──▶  local server (/api/agent)  ──▶  OpenCode
 - **Context carried automatically**: click any page on the left and the top of the panel shows "This message will carry: page X / PRD Y" — no need to paste paths manually.
 - **Incremental update per PRD red-marks**: one click sends the PRD content marked `<span style="color:red">…</span>` as the **only edit scope** to the Agent — it edits only the red-marked parts, treats un-marked history as background, and won't rewrite or "optimize on the side."
 - **Local by default**: the server listens on `127.0.0.1` by default; all writes and the Agent interface (`/api/*`) accept local requests only.
+- **No creation tools after publishing**: the product shell only exposes "New folder / New page" and per-folder creation controls after confirming a local openprototype service. On static SVN or similar published URLs, those controls and the creation dialog are absent from the DOM.
 - **LAN exposure boundary**: with `--host 0.0.0.0`, LAN clients still cannot call write or Agent endpoints, but they can read non-hidden files that the static server can reach under the project root—not only prototype pages. Use this only on a trusted network and in a dedicated prototype project with no secrets or other sensitive files.
 
 ### Install OpenCode (prerequisite for the AI panel)
@@ -245,12 +246,17 @@ When Playwright or Chromium is missing, do not rely on browser-layer results; in
     "startTimeoutMs": 15000
   },
   "products": [
-    { "id": "demo", "roots": ["pc"] }
+    {
+      "id": "demo",
+      "roots": ["pc"],
+      "lanAddress": "http://192.168.1.23:8082/product/demo/pc/index.html"
+    }
   ]
 }
 ```
 
 `host` defaults to `127.0.0.1`. Setting it to `0.0.0.0` exposes static file reads to the LAN, so review the security boundary above first. A long-running background service also requires an explicit `npx openprototype service install --allow-lan`.
+“Copy LAN address” in the product navigator copies that product's `lanAddress` verbatim. The downstream business using openprototype owns this value; the framework does not infer it from the current browser URL. Restart the background service with `npx openprototype service restart` after changing it.
 
 Environment variables can override temporarily: `PROTO_KIT_PORT` · `PROTO_KIT_HOST` · `OPENCODE_BIN` · `OPENCODE_MODEL` · `OPENCODE_PORT`.
 You can also use `npx openprototype serve --port 9000 --host 0.0.0.0` to specify the port / listen address ad hoc.
@@ -271,6 +277,7 @@ The table uses `npx` for the default local-project installation. You can omit `n
 | `npx openprototype check [--changed] [--static-only] [path]` | Check all pages, Git changes, or a path; optionally run static rules only |
 | `npx openprototype nav:sync` | Scan product directories and rebuild `nav-tree.json` |
 | `npx openprototype doctor` | Check Node / OpenCode / config / Playwright / background service health |
+| `npx openprototype --version` | Print the installed openprototype version (also available as `-v` or `version`) |
 | `npm update openprototype` | Upgrade the runtime package within the version range in `package.json` |
 | `npx openprototype update` | Print manual editable-asset comparison and merge guidance; does not upgrade |
 
