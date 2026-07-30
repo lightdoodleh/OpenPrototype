@@ -13,6 +13,7 @@
  *   openprototype nav:sync              重建各产品 nav-tree.json
  *   openprototype doctor                体检：Node / OpenCode / 配置 / Playwright
  *   openprototype update                提示如何更新框架（运行时随 npm，可编辑资产按需覆盖）
+ *   openprototype --version             查看当前安装版本
  */
 
 const fs = require('fs');
@@ -403,6 +404,11 @@ function cmdUpdate() {
 }
 
 // ── 入口 ────────────────────────────────────────────────
+function showVersion() {
+  const pkg = readJson(path.join(PKG_ROOT, 'package.json'), {});
+  info(pkg.version || 'unknown');
+}
+
 function help() {
   info(`
 ${C.b('openprototype')} — 本地原型工作台脚手架
@@ -417,6 +423,7 @@ ${C.b('openprototype')} — 本地原型工作台脚手架
   ${C.g('openprototype nav:sync')}           重建各产品 nav-tree.json
   ${C.g('openprototype doctor')}             体检（Node / OpenCode / 配置 / Playwright）
   ${C.g('openprototype update')}             如何更新框架
+  ${C.g('openprototype --version')}          查看当前安装版本
 `);
 }
 
@@ -433,6 +440,9 @@ async function main() {
     case 'nav-sync': return runNode('scripts/check/sync-nav-tree.js', argv);
     case 'doctor': return cmdDoctor();
     case 'update': return cmdUpdate();
+    case '-v':
+    case '--version':
+    case 'version': return showVersion();
     case undefined:
     case '-h':
     case '--help':
