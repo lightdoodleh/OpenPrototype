@@ -16,7 +16,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
-const { loadConfig } = require('../lib/config');
+const { loadConfig, resolveLanAddress } = require('../lib/config');
 
 function resolveArg(name) {
   const i = process.argv.indexOf(name);
@@ -141,9 +141,18 @@ function handleLanAddress(req, res) {
   const productId = String(requestUrl.searchParams.get('productId') || '').trim();
   const product = CONFIG.products.find((item) => item.id === productId);
   if (!product) return sendJson(res, 404, { ok: false, error: '未找到对应产品的局域网地址配置' });
+
+  let surface = String(requestUrl.searchParams.get('surface') || '').trim();
+  if (!surface && req.headers.referer) {
+    try {
+      const segments = new URL(req.headers.referer).pathname.split('/').filter(Boolean).map(decodeURIComponent);
+      if (segments[0] === 'product' && segments[1] === productId) surface = segments[2] || '';
+    } catch {}
+  }
+
   return sendJson(res, 200, {
     ok: true,
-    lanAddress: typeof product.lanAddress === 'string' ? product.lanAddress.trim() : ''
+    lanAddress: resolveLanAddress(product, surface)
   });
 }
 

@@ -248,15 +248,18 @@ When Playwright or Chromium is missing, do not rely on browser-layer results; in
   "products": [
     {
       "id": "demo",
-      "roots": ["pc"],
-      "lanAddress": "http://192.168.1.23:8082/product/demo/pc/index.html"
+      "roots": ["pc", "h5"],
+      "lanAddress": {
+        "pc": "http://192.168.1.23:8082/product/demo/pc/index.html",
+        "h5": "http://192.168.1.23:8082/product/demo/h5/index.html"
+      }
     }
   ]
 }
 ```
 
 `host` defaults to `127.0.0.1`. Setting it to `0.0.0.0` exposes static file reads to the LAN, so review the security boundary above first. A long-running background service also requires an explicit `npx openprototype service install --allow-lan`.
-“Copy LAN address” in the product navigator copies that product's `lanAddress` verbatim. The downstream business using openprototype owns this value; the framework does not infer it from the current browser URL. Restart the background service with `npx openprototype service restart` after changing it.
+“Copy LAN address” in the product navigator reads the matching key from the product's `lanAddress` object for the current surface; for example, PC reads `lanAddress.pc` and H5 reads `lanAddress.h5`. The legacy string form remains supported and shares one address across all surfaces. The downstream business using openprototype owns these values; the framework does not infer them from the current browser URL. Restart the background service with `npx openprototype service restart` after changing it.
 
 Environment variables can override temporarily: `PROTO_KIT_PORT` · `PROTO_KIT_HOST` · `OPENCODE_BIN` · `OPENCODE_MODEL` · `OPENCODE_PORT`.
 You can also use `npx openprototype serve --port 9000 --host 0.0.0.0` to specify the port / listen address ad hoc.

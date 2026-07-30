@@ -312,7 +312,7 @@ function cmdAddProduct(argv) {
   const config = loadOrInitConfig(root);
   config.products = config.products || [];
   if (!config.products.some((p) => p.id === id)) {
-    config.products.push({ id, roots: ['pc'], lanAddress: '' });
+    config.products.push({ id, roots: ['pc'], lanAddress: { pc: '' } });
     saveConfig(root, config);
     ok(`已在 ${CONFIG_FILENAME} 注册产品 ${id}`);
   } else info(C.dim(`  产品 ${id} 已在配置中`));
