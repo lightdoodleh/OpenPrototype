@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/lightdoodleh/OpenPrototype/compare/v1.3.0...v1.4.0) (2026-07-30)
+
+
+### Features
+
+* 添加局域网地址支持和相关功能 ([a0fcfb3](https://github.com/lightdoodleh/OpenPrototype/commit/a0fcfb374f3f14f7b975186286393aa066f4c36a))
+
 ## [1.3.0](https://github.com/lightdoodleh/OpenPrototype/compare/v1.2.0...v1.3.0) (2026-07-27)
 
 
