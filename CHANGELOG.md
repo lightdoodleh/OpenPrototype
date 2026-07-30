@@ -1,5 +1,64 @@
 # Changelog
 
+## [1.4.0](https://github.com/lightdoodleh/OpenPrototype/compare/v1.3.0...v1.4.0) (2026-07-30)
+
+
+### Features
+
+* 添加局域网地址支持和相关功能 ([a0fcfb3](https://github.com/lightdoodleh/OpenPrototype/commit/a0fcfb374f3f14f7b975186286393aa066f4c36a))
+
+## [1.3.0](https://github.com/lightdoodleh/OpenPrototype/compare/v1.2.0...v1.3.0) (2026-07-27)
+
+
+### Features
+
+* complete project discovery entrypoints ([ab58b14](https://github.com/lightdoodleh/OpenPrototype/commit/ab58b1426d91a0d720173e107166268a05463718))
+
+
+### Bug Fixes
+
+* mirror PRD and Agent demo surfaces ([e3a735c](https://github.com/lightdoodleh/OpenPrototype/commit/e3a735c19e69b8314d674763ace941185df71b5c))
+
+## [1.2.0](https://github.com/lightdoodleh/OpenPrototype/compare/v1.1.0...v1.2.0) (2026-07-27)
+
+
+### Features
+
+* 更新文档和 CLI 注释，明确项目初始化和常驻服务安装说明 ([2bcc02c](https://github.com/lightdoodleh/OpenPrototype/commit/2bcc02c35738b434eba68fc32dc56a31437b9b34))
+* 添加新手引导功能，首次打开工作台时提供分步气泡提示 ([8a3fbd0](https://github.com/lightdoodleh/OpenPrototype/commit/8a3fbd0a10318c35fef6661608fe1429516b67aa))
+
+
+### Bug Fixes
+
+* automate npm publish recovery ([7e4760c](https://github.com/lightdoodleh/OpenPrototype/commit/7e4760c0813d919b02d1c15cf0ca2b7d4c70be92))
+* correct CLI command descriptions ([e309467](https://github.com/lightdoodleh/OpenPrototype/commit/e30946799ac44e8b7789b9bb14317b7fa045579f))
+
+## [1.1.0](https://github.com/lightdoodleh/OpenPrototype/compare/v1.0.2...v1.1.0) (2026-07-24)
+
+
+### Features
+
+* 添加导航栏拖动进入文件夹内的功能 ([e429ed6](https://github.com/lightdoodleh/OpenPrototype/commit/e429ed6c844a79c56e1a5888813d6ccc48cd9044))
+
+## [1.0.2](https://github.com/lightdoodleh/OpenPrototype/compare/v1.0.1...v1.0.2) (2026-07-23)
+
+
+### Features
+
+* add local service installation, lifecycle management, and automatic post-install setup ([#11](https://github.com/lightdoodleh/OpenPrototype/pull/11))
+* support navigation tree drag-and-drop reordering ([#11](https://github.com/lightdoodleh/OpenPrototype/pull/11))
+
+
+### Bug Fixes
+
+* run npm reliably in Windows service smoke tests ([e267e41](https://github.com/lightdoodleh/OpenPrototype/commit/e267e4184e5d21a327e3e035991492864378c8d2))
+* supervise and restart the Windows service process ([7e757c1](https://github.com/lightdoodleh/OpenPrototype/commit/7e757c12b3ffd2e524c437e4134ecf53119620c0))
+
+
+### Documentation
+
+* refresh README screenshots and presentation ([#10](https://github.com/lightdoodleh/OpenPrototype/pull/10))
+
 ## [1.0.1](https://github.com/lightdoodleh/OpenPrototype/compare/v1.0.0...v1.0.1) (2026-07-17)
 
 

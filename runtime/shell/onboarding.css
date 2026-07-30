@@ -1,0 +1,184 @@
+/* 新手引导 — 首次打开工作台时的分步气泡提示。
+   层级说明：blocker(10040) < spotlight(10050) < bubble(10060)。
+   外壳内现有最高层级是新建弹窗遮罩 10000、toast 9999，故整体压在它们之上。 */
+
+/* 吃掉引导期间的所有点击；spotlight 自身不接收事件，靠这一层拦截 */
+.tour-blocker {
+  position: fixed;
+  inset: 0;
+  z-index: 10040;
+  cursor: default;
+}
+
+/* 高亮框：用一个超大扩散的 box-shadow 直接在遮罩上"挖洞"，
+   省掉切四块遮罩的麻烦，且天生跟随目标矩形 */
+.tour-spotlight {
+  position: fixed;
+  z-index: 10050;
+  pointer-events: none;
+  border-radius: 8px;
+  outline: 2px solid #1677ff;
+  outline-offset: 0;
+  box-shadow: 0 0 0 9999px rgba(16, 22, 32, 0.45);
+  transition: top 0.18s ease, left 0.18s ease, width 0.18s ease, height 0.18s ease;
+}
+
+.tour-bubble {
+  position: fixed;
+  z-index: 10060;
+  width: 320px;
+  max-width: calc(100vw - 24px);
+  padding: 14px 16px 12px;
+  border-radius: 10px;
+  background: #fff;
+  color: #20242d;
+  font-size: 13px;
+  line-height: 1.6;
+  box-shadow: 0 8px 24px rgba(16, 22, 32, 0.18);
+  transition: top 0.18s ease, left 0.18s ease;
+}
+
+/* 箭头：8px 实心三角，四个方向各自贴边 */
+.tour-bubble-arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: 8px solid transparent;
+}
+.tour-bubble-arrow.is-top {
+  bottom: -16px;
+  border-top-color: #fff;
+}
+.tour-bubble-arrow.is-bottom {
+  top: -16px;
+  border-bottom-color: #fff;
+}
+.tour-bubble-arrow.is-left {
+  right: -16px;
+  border-left-color: #fff;
+}
+.tour-bubble-arrow.is-right {
+  left: -16px;
+  border-right-color: #fff;
+}
+/* 气泡被 clamp 回视口后箭头可能指偏，此时干脆藏掉，别指错地方 */
+.tour-bubble-arrow.is-hidden {
+  display: none;
+}
+
+.tour-step-index {
+  font-size: 11px;
+  color: #7b8495;
+  letter-spacing: 0.02em;
+}
+
+.tour-title {
+  margin: 2px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #20242d;
+}
+
+.tour-body {
+  color: #4a5262;
+}
+
+.tour-body b {
+  color: #20242d;
+  font-weight: 600;
+}
+
+.tour-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.tour-actions-spacer {
+  flex: 1;
+}
+
+.tour-btn {
+  padding: 4px 12px;
+  border: 1px solid #dfe5ee;
+  border-radius: 4px;
+  background: #fff;
+  color: #4a5262;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.tour-btn:hover {
+  background: #f0f5ff;
+  border-color: #bfdbff;
+  color: #1677ff;
+}
+
+.tour-btn-primary {
+  border-color: #1677ff;
+  background: #1677ff;
+  color: #fff;
+}
+
+.tour-btn-primary:hover {
+  background: #0d5edb;
+  border-color: #0d5edb;
+  color: #fff;
+}
+
+.tour-skip {
+  padding: 4px 2px;
+  border: 0;
+  background: transparent;
+  color: #7b8495;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tour-skip:hover {
+  color: #1677ff;
+}
+
+.tour-btn:focus-visible,
+.tour-skip:focus-visible,
+.tour-replay-btn:focus-visible {
+  outline: 2px solid #1677ff;
+  outline-offset: 2px;
+}
+
+/* 侧栏标题行里的「?」重放入口，由 onboarding.js 运行时注入。
+   尺寸与 .copy-address-btn 对齐，保证同一行视觉齐平 */
+.tour-replay-btn {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #dfe5ee;
+  border-radius: 50%;
+  background: #fff;
+  color: #7b8495;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.tour-replay-btn:hover {
+  background: #edf6ff;
+  border-color: #1677ff;
+  color: #1677ff;
+}
+
+/* 低动效偏好下去掉位移过渡，避免引导跳来跳去引起不适 */
+@media (prefers-reduced-motion: reduce) {
+  .tour-spotlight,
+  .tour-bubble {
+    transition: none;
+  }
+}
