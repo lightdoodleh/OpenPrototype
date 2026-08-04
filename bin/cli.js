@@ -111,6 +111,75 @@ const ONBOARDING_BODY = [
   '<script src="/_kit/shell/onboarding.js"></script>',
   '<!-- onboarding:end -->'
 ].join('\n');
+const LAN_ADDRESS_HELPER_MARK = 'async function loadLanAddress()';
+const LAN_ADDRESS_HELPER = `async function loadLanAddress() {
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  const productAt = parts.indexOf('product');
+  const productId = productAt >= 0 ? decodeURIComponent(parts[productAt + 1] || '') : '';
+  const surface = productAt >= 0 ? decodeURIComponent(parts[productAt + 2] || '') : '';
+  const params = new URLSearchParams({ productId, surface });
+  const res = await fetch('/api/lan-address?' + params.toString(), { cache: 'no-store' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) throw new Error(data.error || '局域网地址读取失败');
+  return String(data.lanAddress || '').trim();
+}`;
+const LAN_ADDRESS_CLICK = `  document.getElementById('copyAddressBtn').addEventListener('click', async () => {
+    try {
+      const lanAddress = await loadLanAddress();
+      if (!lanAddress) {
+        showToast('请先在 proto-kit.config.json 配置该产品当前端的 lanAddress');
+        return;
+      }
+      copyText(lanAddress, '局域网地址已复制到剪贴板');
+    } catch (err) {
+      showToast(err.message || '局域网地址读取失败');
+    }
+  });`;
+const LEGACY_LAN_ADDRESS_MARK = 'openprototype:lan-address:start';
+const LEGACY_LAN_ADDRESS_BLOCK = `<!-- openprototype:lan-address:start -->
+<script>
+(() => {
+  const button = document.getElementById('prototypeCopyAddress');
+  const toast = document.getElementById('prototypeToast');
+  if (!button || !toast) return;
+  const showToast = message => {
+    toast.textContent = message;
+    toast.classList.add('is-visible');
+    window.setTimeout(() => toast.classList.remove('is-visible'), 1800);
+  };
+  button.addEventListener('click', async event => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    try {
+      const parts = window.location.pathname.split('/').filter(Boolean);
+      const productAt = parts.indexOf('product');
+      const params = new URLSearchParams({
+        productId: productAt >= 0 ? decodeURIComponent(parts[productAt + 1] || '') : '',
+        surface: productAt >= 0 ? decodeURIComponent(parts[productAt + 2] || '') : ''
+      });
+      const res = await fetch('/api/lan-address?' + params.toString(), { cache: 'no-store' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.error || '局域网地址读取失败');
+      const lanAddress = String(data.lanAddress || '').trim();
+      if (!lanAddress) throw new Error('请先在 proto-kit.config.json 配置该产品当前端的 lanAddress');
+      try {
+        await navigator.clipboard.writeText(lanAddress);
+      } catch {
+        const textarea = document.createElement('textarea');
+        textarea.value = lanAddress;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        textarea.remove();
+      }
+      showToast('局域网地址已复制到剪贴板');
+    } catch (err) {
+      showToast(err.message || '局域网地址读取失败');
+    }
+  }, true);
+})();
+</script>
+<!-- openprototype:lan-address:end -->`;
 
 /** 列出 product/<id>/<root>/index.html —— 已生成的产品壳 */
 function listProductShells(projectRoot) {
@@ -156,6 +225,74 @@ function patchShellOnboarding(projectRoot) {
 
     fs.writeFileSync(shell, html);
     ok('已补上新手引导入口 ' + rel);
+    patched++;
+  }
+  return patched;
+}
+
+/**
+ * 把旧产品壳的“复制地址”迁移到运行时 /api/lan-address。
+ * 只识别脚手架的 copyAddressBtn 和旧导航的 prototypeCopyAddress；其他定制壳不动。
+ */
+function patchShellLanAddress(projectRoot) {
+  let patched = 0;
+  const oldClick = /  document\.getElementById\('copyAddressBtn'\)\.addEventListener\('click', \(\) => \{\s*copyText\((?:window\.location\.href|NAVIGATOR_ADDRESS),\s*'[^']*'\);\s*\}\);/;
+  const initAnchor = "window.addEventListener('DOMContentLoaded', async () => {";
+
+  for (const shell of listProductShells(projectRoot)) {
+    const rel = path.relative(projectRoot, shell);
+    let html = fs.readFileSync(shell, 'utf8');
+
+    if (/id=(['"])prototypeCopyAddress\1/.test(html)) {
+      if (html.includes(LEGACY_LAN_ADDRESS_MARK)) {
+        info(C.dim('  跳过（已有局域网复制）: ') + rel);
+        continue;
+      }
+      const legacyScript = /<script\b[^>]*\bsrc=(['"])\/scripts\/prototype-agent\/prototype-navigator\.js[^'"]*\1[^>]*><\/script>/i;
+      const legacyMatch = html.match(legacyScript);
+      if (!legacyMatch) {
+        info(C.dim('  跳过（旧导航结构不认识）: ') + rel);
+        continue;
+      }
+      html = html.replace(
+        /(<button\b[^>]*\bid=(['"])prototypeCopyAddress\2[^>]*>)[\s\S]*?(<\/button>)/i,
+        '$1复制局域网地址$3'
+      );
+      html = html.replace(legacyMatch[0], legacyMatch[0] + '\n' + LEGACY_LAN_ADDRESS_BLOCK);
+      fs.writeFileSync(shell, html);
+      ok('已迁移局域网复制功能 ' + rel);
+      patched++;
+      continue;
+    }
+
+    if (!/id=(['"])copyAddressBtn\1/.test(html)) continue;
+
+    const nextLabel = html.replace(
+      /(<button\b[^>]*\bid=(['"])copyAddressBtn\2[^>]*>)[\s\S]*?(<\/button>)/i,
+      '$1复制局域网地址$3'
+    );
+    if (html.includes(LAN_ADDRESS_HELPER_MARK)) {
+      if (nextLabel !== html) {
+        fs.writeFileSync(shell, nextLabel);
+        ok('已更新局域网复制文案 ' + rel);
+        patched++;
+      } else {
+        info(C.dim('  跳过（已有局域网复制）: ') + rel);
+      }
+      continue;
+    }
+    if (!oldClick.test(html) || !html.includes(initAnchor)) {
+      info(C.dim('  跳过（复制逻辑不是已知旧版本）: ') + rel);
+      continue;
+    }
+
+    html = nextLabel.replace(initAnchor, LAN_ADDRESS_HELPER + '\n\n' + initAnchor);
+    html = html.replace(oldClick, LAN_ADDRESS_CLICK);
+    if (!html.includes('copyText(NAVIGATOR_ADDRESS')) {
+      html = html.replace(/^\s*const NAVIGATOR_ADDRESS = [^\n]+;\n/m, '');
+    }
+    fs.writeFileSync(shell, html);
+    ok('已迁移局域网复制功能 ' + rel);
     patched++;
   }
   return patched;
@@ -243,6 +380,7 @@ async function cmdInit() {
   } else info(C.dim('  跳过（已存在）: ') + CONFIG_FILENAME);
 
   patchShellOnboarding(root);
+  patchShellLanAddress(root);
 
   // 合并 package.json 脚本（不覆盖用户已有脚本）
   const pkgPath = path.join(root, 'package.json');
