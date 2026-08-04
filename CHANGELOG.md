@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.7.0](https://github.com/lightdoodleh/OpenPrototype/compare/v1.6.0...v1.7.0) (2026-08-04)
+
+
+### Features
+
+* 迁移旧产品壳的局域网地址复制功能到运行时 API ([88ceb39](https://github.com/lightdoodleh/OpenPrototype/commit/88ceb39bdca3bf4c78fe21ea0735bdd2d54f97cb))
+* 迁移旧产品壳的局域网地址复制功能到运行时 API ([8b46a70](https://github.com/lightdoodleh/OpenPrototype/commit/8b46a70297457a5aa069088de377a9e79525ce09))
+
 ## [1.6.0](https://github.com/lightdoodleh/OpenPrototype/compare/v1.5.0...v1.6.0) (2026-07-30)
 
 
