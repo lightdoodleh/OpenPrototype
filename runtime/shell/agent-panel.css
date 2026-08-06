@@ -48,6 +48,7 @@
 .agent-panel.is-collapsed .agent-resizer,
 .agent-panel.is-collapsed .agent-header-main,
 .agent-panel.is-collapsed .agent-new-chat,
+.agent-panel.is-collapsed .agent-thread-bar,
 .agent-panel.is-collapsed .agent-context,
 .agent-panel.is-collapsed .agent-messages,
 .agent-panel.is-collapsed .agent-composer {
@@ -136,6 +137,48 @@
   color: #1677ff;
   line-height: 1.2;
   writing-mode: vertical-rl;
+}
+
+.agent-thread-bar {
+  min-height: 38px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-bottom: 1px solid #edf0f5;
+  background: #fff;
+}
+
+.agent-thread-label,
+.agent-thread-count {
+  flex: 0 0 auto;
+  color: #7b8495;
+  font-size: 10px;
+}
+
+.agent-thread-select {
+  min-width: 0;
+  height: 26px;
+  flex: 1;
+  padding: 0 24px 0 7px;
+  border: 1px solid #dfe5ee;
+  border-radius: 5px;
+  outline: 0;
+  background: #fafbfc;
+  color: #3f4754;
+  font: inherit;
+  font-size: 11px;
+}
+
+.agent-thread-select:hover,
+.agent-thread-select:focus {
+  border-color: #91caff;
+}
+
+.agent-thread-select:disabled {
+  cursor: wait;
+  opacity: .65;
 }
 
 .agent-context {
@@ -263,17 +306,63 @@
   white-space: nowrap;
 }
 
-.agent-tool {
-  display: flex;
-  align-items: center;
-  gap: 7px;
+.agent-tool-group {
   margin-top: 5px;
-  padding: 5px 7px;
   border: 1px solid #e4e9f0;
   border-radius: 5px;
   background: #fafbfc;
   color: #687386;
   font-size: 10px;
+}
+
+.agent-tool-summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  padding: 5px 7px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.agent-tool-summary::-webkit-details-marker { display: none; }
+.agent-tool-summary::marker { content: ""; }
+
+.agent-tool-summary-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.agent-tool-summary-hint {
+  flex: 0 0 auto;
+  color: #8a94a5;
+}
+
+.agent-tool-summary-hint::after {
+  content: "›";
+  display: inline-block;
+  margin-left: 4px;
+  transition: transform .15s ease;
+}
+
+.agent-tool-group[open] .agent-tool-summary-hint::after {
+  transform: rotate(90deg);
+}
+
+.agent-tool-list {
+  padding: 0 7px 7px 20px;
+  border-top: 1px solid #edf0f4;
+}
+
+.agent-tool {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 0;
+  color: #687386;
+  font-size: 10px;
+  overflow-wrap: anywhere;
 }
 
 .agent-tool-status {
@@ -287,6 +376,9 @@
 .agent-tool.is-running .agent-tool-status { background: #1677ff; }
 .agent-tool.is-complete .agent-tool-status { background: #18b54a; }
 .agent-tool.is-error .agent-tool-status { background: #d91f2f; }
+.agent-tool-summary.is-running .agent-tool-status { background: #1677ff; }
+.agent-tool-summary.is-complete .agent-tool-status { background: #18b54a; }
+.agent-tool-summary.is-error .agent-tool-status { background: #d91f2f; }
 
 .agent-request-card,
 .agent-diff-card {

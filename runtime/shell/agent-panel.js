@@ -2,16 +2,55 @@
   const KIT = window.PROTO_KIT || {};
   const NS = (KIT.productId || 'proto') + '-navigator';
   const SESSION_KEY = NS + '-agent-session';
+  const THREADS_KEY = NS + '-agent-threads';
   const WIDTH_KEY = NS + '-agent-width';
   const COLLAPSED_KEY = NS + '-agent-collapsed';
   const DEFAULT_WIDTH = 380;
   const MIN_WIDTH = 320;
   const MAX_WIDTH = 600;
   const HISTORY_REFRESH_DELAY = 180;
+  const BACKGROUND_STATUS_DELAY = 1600;
   const agentStorage = window['localStorage'];
 
+  function loadStoredThreads() {
+    let threads = [];
+    try {
+      const stored = JSON.parse(agentStorage.getItem(THREADS_KEY) || '[]');
+      if (Array.isArray(stored)) {
+        threads = stored.filter(item => item && item.id).map((item, index) => ({
+          id: String(item.id),
+          title: String(item.title || `对话 ${index + 1}`),
+          createdAt: Number(item.createdAt || Date.now()),
+          running: false,
+          unread: false,
+          taskContext: null
+        }));
+      }
+    } catch (err) {
+      threads = [];
+    }
+    const legacyId = agentStorage.getItem(SESSION_KEY) || '';
+    if (legacyId && !threads.some(item => item.id === legacyId)) {
+      threads.push({
+        id: legacyId,
+        title: `对话 ${threads.length + 1}`,
+        createdAt: Date.now(),
+        running: false,
+        unread: false,
+        taskContext: null
+      });
+    }
+    return threads;
+  }
+
+  const storedThreads = loadStoredThreads();
+  const storedSessionId = agentStorage.getItem(SESSION_KEY) || '';
+
   const state = {
-    sessionId: agentStorage.getItem(SESSION_KEY) || '',
+    sessionId: storedThreads.some(item => item.id === storedSessionId)
+      ? storedSessionId
+      : (storedThreads[storedThreads.length - 1] || {}).id || '',
+    threads: storedThreads,
     currentContext: { htmlPath: '', prdPath: '', title: '' },
     taskContext: null,
     eventSource: null,
@@ -23,8 +62,10 @@
     statusText: '正在连接 OpenCode…',
     refreshTimer: null,
     statusPollTimer: null,
+    backgroundStatusTimer: null,
     taskStartedAt: 0,
-    optimisticMessage: ''
+    optimisticMessage: '',
+    expandedToolGroups: new Set()
   };
 
   let refs = {};
@@ -56,6 +97,11 @@
       '  <button class="agent-header-btn agent-new-chat" id="agentNewChatBtn" type="button">新对话</button>',
       '  <button class="agent-header-btn agent-toggle" id="agentToggleBtn" type="button">收起</button>',
       '</div>',
+      '<div class="agent-thread-bar">',
+      '  <span class="agent-thread-label">对话</span>',
+      '  <select class="agent-thread-select" id="agentThreadSelect" aria-label="切换 Agent 对话"></select>',
+      '  <span class="agent-thread-count" id="agentThreadCount"></span>',
+      '</div>',
       '<div class="agent-context">',
       '  <div class="agent-context-label">本条消息将携带</div>',
       '  <div class="agent-context-chip"><span class="agent-context-kind">页面</span><span class="agent-context-value" id="agentHtmlContext">请先从左侧选择页面</span></div>',
@@ -82,6 +128,8 @@
       statusText: document.getElementById('agentStatusText'),
       newChat: document.getElementById('agentNewChatBtn'),
       toggle: document.getElementById('agentToggleBtn'),
+      threadSelect: document.getElementById('agentThreadSelect'),
+      threadCount: document.getElementById('agentThreadCount'),
       htmlContext: document.getElementById('agentHtmlContext'),
       prdContext: document.getElementById('agentPrdContext'),
       quickAction: document.getElementById('agentPrdUpdateBtn'),
@@ -96,6 +144,106 @@
     state.statusText = text;
     refs.statusDot.className = 'agent-status-dot' + (kind ? ` is-${kind}` : '');
     refs.statusText.textContent = text;
+  }
+
+  function currentThread() {
+    return state.threads.find(item => item.id === state.sessionId) || null;
+  }
+
+  function persistThreads() {
+    const stored = state.threads.map(item => ({
+      id: item.id,
+      title: item.title,
+      createdAt: item.createdAt
+    }));
+    agentStorage.setItem(THREADS_KEY, JSON.stringify(stored));
+    if (state.sessionId) agentStorage.setItem(SESSION_KEY, state.sessionId);
+  }
+
+  function renderThreadSwitcher() {
+    if (!refs.threadSelect) return;
+    refs.threadSelect.replaceChildren();
+    state.threads.forEach((thread, index) => {
+      const option = document.createElement('option');
+      option.value = thread.id;
+      const status = thread.running ? ' · 处理中' : thread.unread ? ' · 已完成' : '';
+      option.textContent = `${thread.title || `对话 ${index + 1}`}${status}`;
+      refs.threadSelect.appendChild(option);
+    });
+    refs.threadSelect.value = state.sessionId;
+    refs.threadCount.textContent = state.threads.length ? `${state.threads.length} 个` : '';
+  }
+
+  function detachActiveSession() {
+    clearTimeout(state.refreshTimer);
+    clearTimeout(state.statusPollTimer);
+    state.refreshTimer = null;
+    state.statusPollTimer = null;
+    if (state.eventSource) state.eventSource.close();
+    state.eventSource = null;
+  }
+
+  function activateThread(thread) {
+    state.sessionId = thread.id;
+    thread.unread = false;
+    state.taskContext = thread.taskContext || null;
+    state.messages = [];
+    state.pending = { permissions: [], questions: [] };
+    state.diff = [];
+    state.optimisticMessage = '';
+    state.expandedToolGroups.clear();
+    state.running = Boolean(thread.running);
+    state.taskStartedAt = state.running ? Date.now() : 0;
+    refs.stop.hidden = !state.running;
+    refs.send.hidden = state.running;
+    persistThreads();
+    renderThreadSwitcher();
+    renderMessages();
+    updateContextDisplay();
+  }
+
+  function nextThreadTitle() {
+    return `对话 ${state.threads.length + 1}`;
+  }
+
+  function scheduleBackgroundStatusPoll() {
+    if (state.backgroundStatusTimer || !state.connected) return;
+    const hasBackgroundWork = state.threads.some(thread => thread.id !== state.sessionId && thread.running);
+    if (!hasBackgroundWork) return;
+    state.backgroundStatusTimer = setTimeout(async () => {
+      state.backgroundStatusTimer = null;
+      const activeId = state.sessionId;
+      const backgroundThreads = state.threads.filter(thread => thread.id !== activeId && thread.running);
+      await Promise.all(backgroundThreads.map(async thread => {
+        try {
+          const data = await api(`/api/agent/sessions/${thread.id}/status`);
+          if (thread.id !== state.sessionId && data.status && data.status.type === 'idle') {
+            thread.running = false;
+            thread.unread = true;
+            reloadTaskPreview(thread.taskContext);
+          }
+        } catch (err) {
+          // A background thread can be checked again after the next foreground action.
+        }
+      }));
+      persistThreads();
+      renderThreadSwitcher();
+      scheduleBackgroundStatusPoll();
+    }, BACKGROUND_STATUS_DELAY);
+  }
+
+  async function restoreBackgroundThreadStatuses() {
+    const backgroundThreads = state.threads.filter(thread => thread.id !== state.sessionId);
+    await Promise.all(backgroundThreads.map(async thread => {
+      try {
+        const data = await api(`/api/agent/sessions/${thread.id}/status`);
+        thread.running = Boolean(data.status && data.status.type !== 'idle');
+      } catch (err) {
+        thread.running = false;
+      }
+    }));
+    renderThreadSwitcher();
+    scheduleBackgroundStatusPoll();
   }
 
   function applyPanelWidth(width, persist) {
@@ -170,7 +318,56 @@
     return element;
   }
 
-  function renderMessage(item) {
+  function renderToolGroup(toolParts, groupKey) {
+    const details = document.createElement('details');
+    details.className = 'agent-tool-group';
+    details.open = state.expandedToolGroups.has(groupKey);
+
+    const statuses = toolParts.map(part => part.state && part.state.status ? part.state.status : 'pending');
+    const hasError = statuses.includes('error');
+    const isRunning = statuses.some(status => status !== 'completed' && status !== 'error');
+    const summary = document.createElement('summary');
+    summary.className = `agent-tool-summary is-${hasError ? 'error' : isRunning ? 'running' : 'complete'}`;
+    const summaryDot = document.createElement('span');
+    summaryDot.className = 'agent-tool-status';
+    summary.appendChild(summaryDot);
+    appendText(
+      summary,
+      'agent-tool-summary-label',
+      hasError ? `${toolParts.length} 个操作中有失败` : isRunning ? `正在执行 ${toolParts.length} 个操作…` : `已执行 ${toolParts.length} 个操作`
+    );
+    const hint = document.createElement('span');
+    hint.className = 'agent-tool-summary-hint';
+    hint.textContent = details.open ? '收起明细' : '查看明细';
+    summary.appendChild(hint);
+    details.appendChild(summary);
+    details.addEventListener('toggle', () => {
+      hint.textContent = details.open ? '收起明细' : '查看明细';
+      if (details.open) state.expandedToolGroups.add(groupKey);
+      else state.expandedToolGroups.delete(groupKey);
+    });
+
+    const list = document.createElement('div');
+    list.className = 'agent-tool-list';
+    toolParts.forEach(part => {
+      const status = part.state && part.state.status ? part.state.status : 'pending';
+      const tool = document.createElement('div');
+      const statusClass = status === 'completed' ? 'complete' : status === 'error' ? 'error' : 'running';
+      tool.className = `agent-tool is-${statusClass}`;
+      const dot = document.createElement('span');
+      dot.className = 'agent-tool-status';
+      tool.appendChild(dot);
+      const fallbackTitle = part.tool === 'question'
+        ? (status === 'completed' ? '已收到回答' : status === 'error' ? '提问失败' : '等待你的回答')
+        : (part.tool || '执行工具');
+      appendText(tool, '', (part.state && part.state.title) || fallbackTitle);
+      list.appendChild(tool);
+    });
+    details.appendChild(list);
+    return details;
+  }
+
+  function renderMessage(item, fallbackKey) {
     const info = item.info || item;
     const role = info.role || 'assistant';
     const parts = Array.isArray(item.parts) ? item.parts : [];
@@ -192,20 +389,23 @@
     }
     if (parsed.text) appendText(wrapper, 'agent-message-body', parsed.text);
 
-    toolParts.forEach(part => {
-      const status = part.state && part.state.status ? part.state.status : 'pending';
-      const tool = document.createElement('div');
-      const statusClass = status === 'completed' ? 'complete' : status === 'error' ? 'error' : 'running';
-      tool.className = `agent-tool is-${statusClass}`;
-      const dot = document.createElement('span');
-      dot.className = 'agent-tool-status';
-      tool.appendChild(dot);
-      const fallbackTitle = part.tool === 'question'
-        ? (status === 'completed' ? '已收到回答' : status === 'error' ? '提问失败' : '等待你的回答')
-        : (part.tool || '执行工具');
-      appendText(tool, '', (part.state && part.state.title) || fallbackTitle);
-      wrapper.appendChild(tool);
-    });
+    if (toolParts.length) {
+      const groupKey = String(info.id || item.id || fallbackKey || 'tool-group');
+      wrapper.appendChild(renderToolGroup(toolParts, groupKey));
+    }
+    return wrapper;
+  }
+
+  function renderToolMessageBatch(items, fallbackKey) {
+    const first = items[0] || {};
+    const firstInfo = first.info || first;
+    const toolParts = items.flatMap(item => (item.parts || []).filter(part => part.type === 'tool'));
+    if (!toolParts.length) return null;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'agent-message is-assistant';
+    appendText(wrapper, 'agent-message-role', 'OpenCode');
+    const groupKey = String(firstInfo.id || first.id || fallbackKey || 'tool-batch');
+    wrapper.appendChild(renderToolGroup(toolParts, groupKey));
     return wrapper;
   }
 
@@ -325,10 +525,32 @@
     const diffCard = renderDiff();
     if (diffCard) refs.messages.appendChild(diffCard);
 
-    state.messages.forEach(item => {
-      const message = renderMessage(item);
+    let toolBatch = [];
+    let toolBatchStart = 0;
+    const flushToolBatch = () => {
+      if (!toolBatch.length) return;
+      const message = renderToolMessageBatch(toolBatch, `tool-batch-${toolBatchStart}`);
+      if (message) refs.messages.appendChild(message);
+      toolBatch = [];
+    };
+
+    state.messages.forEach((item, index) => {
+      const info = item.info || item;
+      const parts = Array.isArray(item.parts) ? item.parts : [];
+      const hasText = parts.some(part => part.type === 'text' && part.text);
+      const hasTools = parts.some(part => part.type === 'tool');
+      const isAssistant = (info.role || 'assistant') === 'assistant';
+      if (isAssistant && !hasText && !hasTools) return;
+      if (isAssistant && !hasText && hasTools) {
+        if (!toolBatch.length) toolBatchStart = index;
+        toolBatch.push(item);
+        return;
+      }
+      flushToolBatch();
+      const message = renderMessage(item, `message-${index}`);
       if (message) refs.messages.appendChild(message);
     });
+    flushToolBatch();
 
     if (state.optimisticMessage) {
       const message = renderMessage({
@@ -354,14 +576,18 @@
   function setRunning(running) {
     if (running && !state.running) state.taskStartedAt = Date.now();
     state.running = running;
+    const thread = currentThread();
+    if (thread) thread.running = running;
     refs.stop.hidden = !running;
     refs.send.hidden = running;
-    refs.newChat.disabled = running;
     if (running) {
       setStatus('running', 'OpenCode 正在处理…');
       scheduleStatusPoll();
+      scheduleBackgroundStatusPoll();
     }
     else if (state.connected) setStatus('ready', state.statusText.includes('失败') ? state.statusText : 'OpenCode 已连接');
+    persistThreads();
+    renderThreadSwitcher();
     updateContextDisplay();
   }
 
@@ -437,11 +663,12 @@
     }
   }
 
-  function reloadTaskPreview() {
-    if (!state.taskContext || state.currentContext.htmlPath !== state.taskContext.htmlPath) return;
+  function reloadTaskPreview(taskContext) {
+    const context = taskContext || state.taskContext;
+    if (!context || state.currentContext.htmlPath !== context.htmlPath) return;
     const frame = document.getElementById('previewFrame');
     if (!frame) return;
-    const baseUrl = state.taskContext.htmlPath;
+    const baseUrl = context.htmlPath;
     frame.src = baseUrl + (baseUrl.includes('?') ? '&' : '?') + `_agentReload=${Date.now()}`;
   }
 
@@ -490,19 +717,56 @@
   }
 
   async function createSession() {
+    const threadTitle = nextThreadTitle();
     const data = await api('/api/agent/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: (KIT.productTitle || '原型') + ' Agent' })
+      body: JSON.stringify({ title: `${KIT.productTitle || '原型'} · ${threadTitle}` })
     });
-    state.sessionId = data.session.id;
-    agentStorage.setItem(SESSION_KEY, state.sessionId);
-    state.messages = [];
-    state.pending = { permissions: [], questions: [] };
-    state.diff = [];
-    state.optimisticMessage = '';
+    detachActiveSession();
+    const thread = {
+      id: data.session.id,
+      title: threadTitle,
+      createdAt: Date.now(),
+      running: false,
+      unread: false,
+      taskContext: null
+    };
+    state.threads.push(thread);
+    activateThread(thread);
     connectEvents();
-    renderMessages();
+    setStatus('ready', '已开始新对话');
+    scheduleBackgroundStatusPoll();
+    return thread;
+  }
+
+  async function switchSession(sessionId) {
+    const thread = state.threads.find(item => item.id === sessionId);
+    if (!thread || thread.id === state.sessionId) return;
+    refs.threadSelect.disabled = true;
+    detachActiveSession();
+    activateThread(thread);
+    setStatus(thread.running ? 'running' : 'ready', thread.running ? '正在恢复任务状态…' : '正在载入对话…');
+    try {
+      const restored = await refreshHistory();
+      if (!restored) {
+        state.threads = state.threads.filter(item => item.id !== thread.id);
+        persistThreads();
+        await createSession();
+        setStatus('ready', '原对话已失效，已新建对话');
+        return;
+      }
+      connectEvents();
+      const data = await api(`/api/agent/sessions/${state.sessionId}/status`);
+      setRunning(data.status && data.status.type !== 'idle');
+      await Promise.all([refreshPending(), refreshDiff()]);
+    } catch (err) {
+      setStatus('error', `切换对话失败：${err.message}`);
+    } finally {
+      refs.threadSelect.disabled = false;
+      renderThreadSwitcher();
+      scheduleBackgroundStatusPoll();
+    }
   }
 
   async function ensureSession() {
@@ -512,12 +776,15 @@
     }
     const restored = await refreshHistory();
     if (!restored) {
+      state.threads = state.threads.filter(item => item.id !== state.sessionId);
+      persistThreads();
       await createSession();
       return;
     }
     connectEvents();
     const data = await api(`/api/agent/sessions/${state.sessionId}/status`);
     setRunning(data.status && data.status.type !== 'idle');
+    scheduleBackgroundStatusPoll();
   }
 
   async function sendMessage(message) {
@@ -526,6 +793,16 @@
     try {
       if (!state.sessionId) await createSession();
       state.taskContext = { ...state.currentContext };
+      const thread = currentThread();
+      if (thread) {
+        thread.taskContext = { ...state.taskContext };
+        if (/^对话 \d+$/.test(thread.title)) {
+          const conciseTitle = text.replace(/\s+/g, ' ').slice(0, 18);
+          if (conciseTitle) thread.title = conciseTitle;
+        }
+      }
+      persistThreads();
+      renderThreadSwitcher();
       state.optimisticMessage = [
         '[导航器上下文]',
         `页面：${state.taskContext.htmlPath}`,
@@ -597,13 +874,16 @@
       setCollapsed(!refs.panel.classList.contains('is-collapsed'), true);
     });
     refs.newChat.addEventListener('click', async () => {
+      refs.newChat.disabled = true;
       try {
         await createSession();
-        setStatus('ready', '已开始新对话');
       } catch (err) {
         setStatus('error', `新建对话失败：${err.message}`);
+      } finally {
+        refs.newChat.disabled = false;
       }
     });
+    refs.threadSelect.addEventListener('change', () => switchSession(refs.threadSelect.value));
     refs.send.addEventListener('click', () => sendMessage(refs.input.value));
     refs.stop.addEventListener('click', abortTask);
     refs.quickAction.addEventListener('click', () => sendMessage('请只根据当前 PRD 中所有红色标记的内容更新当前 HTML/JS 原型及必要的 mock/constants；不要修改 PRD 本身，也不要处理未标红的历史内容。'));
@@ -646,6 +926,7 @@
     bindEvents();
     applyPanelWidth(agentStorage.getItem(WIDTH_KEY) || DEFAULT_WIDTH, false);
     setCollapsed(agentStorage.getItem(COLLAPSED_KEY) === '1', false);
+    renderThreadSwitcher();
     renderMessages();
     updateContextDisplay();
 
@@ -655,6 +936,7 @@
       setStatus('ready', `OpenCode ${status.version} · ${status.model}`);
       updateContextDisplay();
       await ensureSession();
+      await restoreBackgroundThreadStatuses();
       await refreshPending();
     } catch (err) {
       state.connected = false;

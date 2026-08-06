@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.7.1](https://github.com/lightdoodleh/OpenPrototype/compare/v1.7.0...v1.7.1) (2026-08-06)
+
+
+### Features
+
+* Agent 工具调用默认合并折叠，保留运行与失败状态
+* Agent 支持多线程对话、后台执行、会话切换与完成提醒
+
 ## [1.7.0](https://github.com/lightdoodleh/OpenPrototype/compare/v1.6.0...v1.7.0) (2026-08-04)
 
 
