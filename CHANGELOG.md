@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/lightdoodleh/OpenPrototype/compare/v1.7.0...v1.8.0) (2026-08-06)
+
+
+### Features
+
+* add concurrent Agent conversations ([dc05d61](https://github.com/lightdoodleh/OpenPrototype/commit/dc05d61a24638b8cc28619f73c0145025ca93ac5))
+
 ## [1.7.1](https://github.com/lightdoodleh/OpenPrototype/compare/v1.7.0...v1.7.1) (2026-08-06)
 
 
