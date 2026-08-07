@@ -135,6 +135,27 @@ const LAN_ADDRESS_CLICK = `  document.getElementById('copyAddressBtn').addEventL
       showToast(err.message || '局域网地址读取失败');
     }
   });`;
+const FUZZY_VERSION_MATCH_CALL = 'fuzzyVersionMatch(prdVer, currentVer)';
+const EXACT_VERSION_MATCH_CALL = 'versionSearchMatch(prdVer, currentVer)';
+const FUZZY_VERSION_MATCH_HELPER = `function fuzzyVersionMatch(version, keyword) {
+  const source = normalizeVersionSearchText(version);
+  const target = normalizeVersionSearchText(keyword);
+  if (!target) return true;
+  if (source.indexOf(target) !== -1) return true;
+
+  let index = 0;
+  for (const char of target) {
+    index = source.indexOf(char, index);
+    if (index === -1) return false;
+    index++;
+  }
+  return true;
+}`;
+const EXACT_VERSION_MATCH_HELPER = `function versionSearchMatch(version, keyword) {
+  const source = normalizeVersionSearchText(version);
+  const target = normalizeVersionSearchText(keyword);
+  return !!target && source === target;
+}`;
 const LEGACY_LAN_ADDRESS_MARK = 'openprototype:lan-address:start';
 const LEGACY_LAN_ADDRESS_BLOCK = `<!-- openprototype:lan-address:start -->
 <script>
@@ -298,6 +319,30 @@ function patchShellLanAddress(projectRoot) {
   return patched;
 }
 
+/** 把旧产品壳的版本模糊匹配迁移为忽略格式差异后的完整匹配。 */
+function patchShellVersionSearch(projectRoot) {
+  let patched = 0;
+  for (const shell of listProductShells(projectRoot)) {
+    const rel = path.relative(projectRoot, shell);
+    let html = fs.readFileSync(shell, 'utf8');
+    if (html.includes(EXACT_VERSION_MATCH_CALL) && html.includes(EXACT_VERSION_MATCH_HELPER)) {
+      info(C.dim('  跳过（版本搜索已是精确匹配）: ') + rel);
+      continue;
+    }
+    if (!html.includes(FUZZY_VERSION_MATCH_CALL) || !html.includes(FUZZY_VERSION_MATCH_HELPER)) {
+      info(C.dim('  跳过（版本搜索逻辑不是已知旧版本）: ') + rel);
+      continue;
+    }
+    html = html
+      .replace(FUZZY_VERSION_MATCH_CALL, EXACT_VERSION_MATCH_CALL)
+      .replace(FUZZY_VERSION_MATCH_HELPER, EXACT_VERSION_MATCH_HELPER);
+    fs.writeFileSync(shell, html);
+    ok('已迁移版本精确搜索 ' + rel);
+    patched++;
+  }
+  return patched;
+}
+
 /** 新项目 package.json 里本框架的依赖版本（已发布 npm，语义化版本管理） */
 function kitDependencySpec() {
   const pkg = readJson(path.join(PKG_ROOT, 'package.json'), {});
@@ -381,6 +426,7 @@ async function cmdInit() {
 
   patchShellOnboarding(root);
   patchShellLanAddress(root);
+  patchShellVersionSearch(root);
 
   // 合并 package.json 脚本（不覆盖用户已有脚本）
   const pkgPath = path.join(root, 'package.json');

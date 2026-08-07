@@ -807,7 +807,7 @@ function applyVersionBadge(path, ver) {
 function refreshVersionMatch(row) {
   const currentVer = (document.getElementById('versionInput').value || '').trim();
   const prdVer = row.dataset.prdVersion || '';
-  const isMatch = currentVer && prdVer && fuzzyVersionMatch(prdVer, currentVer);
+  const isMatch = currentVer && prdVer && versionSearchMatch(prdVer, currentVer);
   row.classList.toggle('version-match', isMatch);
   const badge = row.querySelector('.version-badge');
   if (badge) badge.classList.toggle('match', isMatch);
@@ -969,19 +969,10 @@ function normalizeVersionSearchText(text) {
   return normalizeSearchText(text).replace(/[._-]/g, '');
 }
 
-function fuzzyVersionMatch(version, keyword) {
+function versionSearchMatch(version, keyword) {
   const source = normalizeVersionSearchText(version);
   const target = normalizeVersionSearchText(keyword);
-  if (!target) return true;
-  if (source.indexOf(target) !== -1) return true;
-
-  let index = 0;
-  for (const char of target) {
-    index = source.indexOf(char, index);
-    if (index === -1) return false;
-    index++;
-  }
-  return true;
+  return !!target && source === target;
 }
 
 function renderVersionHistory() {
