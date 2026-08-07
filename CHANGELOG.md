@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.1](https://github.com/lightdoodleh/OpenPrototype/compare/v1.8.0...v1.8.1) (2026-08-07)
+
+
+### Bug Fixes
+
+* make version search exact ([79916ee](https://github.com/lightdoodleh/OpenPrototype/commit/79916ee2bffcfb15151744e8631783b4de30706a))
+
 ## [1.8.0](https://github.com/lightdoodleh/OpenPrototype/compare/v1.7.0...v1.8.0) (2026-08-06)
 
 
