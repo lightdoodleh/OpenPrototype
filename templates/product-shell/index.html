@@ -756,29 +756,31 @@ function loadVersionCache() { try { return JSON.parse(navStorage.getItem(VER_CAC
 function saveVersionCache() { navStorage.setItem(VER_CACHE_KEY, JSON.stringify(versionCache)); }
 versionCache = loadVersionCache();
 
-function comparePrdVersions(left, right) {
-  const leftParts = String(left || '').replace(/^v/i, '').split('.');
-  const rightParts = String(right || '').replace(/^v/i, '').split('.');
-  const length = Math.max(leftParts.length, rightParts.length);
-  for (let index = 0; index < length; index += 1) {
-    const leftPart = leftParts[index] || '0';
-    const rightPart = rightParts[index] || '0';
-    const leftNumber = /^\d+$/.test(leftPart) ? Number(leftPart) : null;
-    const rightNumber = /^\d+$/.test(rightPart) ? Number(rightPart) : null;
-    const comparison = leftNumber !== null && rightNumber !== null
-      ? leftNumber - rightNumber
-      : leftPart.localeCompare(rightPart, undefined, { numeric: true, sensitivity: 'base' });
-    if (comparison !== 0) return comparison;
-  }
-  return 0;
-}
+function extractPrdHistoryLatestVersion(text) {
+  const lines = String(text || '').replace(/<[^>]+>/g, '').split(/\r?\n/);
+  let latestVersion = null;
 
-function extractPrdHistoryMaxVersion(text) {
-  const plainText = String(text || '').replace(/<[^>]+>/g, '');
-  const versions = [...plainText.matchAll(/^\|\s*(v\d+(?:\.[0-9a-z]+)+)\s*\|/gim)].map(match => match[1]);
-  return versions.length
-    ? versions.reduce((maxVersion, version) => comparePrdVersions(version, maxVersion) > 0 ? version : maxVersion)
-    : null;
+  for (let index = 0; index < lines.length; index += 1) {
+    if (!/^\s*\|.*\|\s*$/.test(lines[index])) continue;
+
+    const tableLines = [];
+    while (index < lines.length && /^\s*\|.*\|\s*$/.test(lines[index])) {
+      tableLines.push(lines[index]);
+      index += 1;
+    }
+    index -= 1;
+
+    if (tableLines.length < 3 || !/^\s*\|(?:\s*:?-{3,}:?\s*\|)+\s*$/.test(tableLines[1])) continue;
+    const headerCell = tableLines[0].split('|')[1] || '';
+    if (!headerCell.includes('版本')) continue;
+
+    tableLines.slice(2).forEach(row => {
+      const version = (row.split('|')[1] || '').trim();
+      if (version) latestVersion = version;
+    });
+  }
+
+  return latestVersion;
 }
 
 async function fetchPageVersion(htmlPath) {
@@ -787,7 +789,7 @@ async function fetchPageVersion(htmlPath) {
     const res = await fetch(mdPath, { cache: 'no-cache' });
     if (!res.ok) return null;
     const text = await res.text();
-    return extractPrdHistoryMaxVersion(text);
+    return extractPrdHistoryLatestVersion(text);
   } catch { return null; }
 }
 

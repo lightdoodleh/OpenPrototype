@@ -4,7 +4,7 @@
  */
 
 // 页面可在引入本模块前声明这些全局以覆盖默认行为；未声明时使用默认值。
-// “当前版本”优先读取主 PRD 历史记录中的最大版本；PRD_OVERVIEW_VERSION 仅作兼容兜底。
+// “当前版本”优先读取主 PRD 版本记录表的最后一条；PRD_OVERVIEW_VERSION 仅作兼容兜底。
 // PRD_WORKSPACE_MAP 配置多文档工作区。
 var PRD_BASE_PATH = typeof PRD_BASE_PATH !== 'undefined' ? PRD_BASE_PATH : './';
 var PRD_FILE_MAP = typeof PRD_FILE_MAP !== 'undefined' ? PRD_FILE_MAP : {};
@@ -434,41 +434,36 @@ function getPrdDisplayName(filePath) {
     return (filePath || '').split('/').pop().replace(/\.md(?:#.*)?$/i, '').replace(/_/g, ' ');
 }
 
-function comparePrdVersions(left, right) {
-    var leftParts = String(left || '').replace(/^v/i, '').split('.');
-    var rightParts = String(right || '').replace(/^v/i, '').split('.');
-    var length = Math.max(leftParts.length, rightParts.length);
+function getPrdHistoryLatestVersion(content) {
+    var lines = String(content || '').replace(/<[^>]+>/g, '').split(/\r?\n/);
+    var latestVersion = '';
 
-    for (var index = 0; index < length; index += 1) {
-        var leftPart = leftParts[index] || '0';
-        var rightPart = rightParts[index] || '0';
-        var leftNumber = /^\d+$/.test(leftPart) ? Number(leftPart) : null;
-        var rightNumber = /^\d+$/.test(rightPart) ? Number(rightPart) : null;
-        var comparison = leftNumber !== null && rightNumber !== null
-            ? leftNumber - rightNumber
-            : leftPart.localeCompare(rightPart, undefined, { numeric: true, sensitivity: 'base' });
-        if (comparison !== 0) return comparison;
-    }
-    return 0;
-}
+    for (var index = 0; index < lines.length; index += 1) {
+        if (!/^\s*\|.*\|\s*$/.test(lines[index])) continue;
 
-function getPrdHistoryMaxVersion(content) {
-    var plainText = String(content || '').replace(/<[^>]+>/g, '');
-    var pattern = /^\|\s*(v\d+(?:\.[0-9a-z]+)+)\s*\|/gim;
-    var versions = [];
-    var match;
-    while ((match = pattern.exec(plainText)) !== null) {
-        versions.push(match[1]);
+        var tableLines = [];
+        while (index < lines.length && /^\s*\|.*\|\s*$/.test(lines[index])) {
+            tableLines.push(lines[index]);
+            index += 1;
+        }
+        index -= 1;
+
+        if (tableLines.length < 3 || !/^\s*\|(?:\s*:?-{3,}:?\s*\|)+\s*$/.test(tableLines[1])) continue;
+        var headerCell = tableLines[0].split('|')[1] || '';
+        if (headerCell.indexOf('版本') === -1) continue;
+
+        tableLines.slice(2).forEach(function(row) {
+            var version = (row.split('|')[1] || '').trim();
+            if (version) latestVersion = version;
+        });
     }
-    if (!versions.length) return '';
-    return versions.reduce(function(maxVersion, version) {
-        return comparePrdVersions(version, maxVersion) > 0 ? version : maxVersion;
-    });
+
+    return latestVersion;
 }
 
 function getPrdOverviewVersion(rootContent) {
-    var historyMaxVersion = getPrdHistoryMaxVersion(rootContent);
-    if (historyMaxVersion) return historyMaxVersion;
+    var historyLatestVersion = getPrdHistoryLatestVersion(rootContent);
+    if (historyLatestVersion) return historyLatestVersion;
     if (prdOverviewVersion) return prdOverviewVersion;
     if (typeof PRD_OVERVIEW_VERSION === 'undefined') return '';
     return String(PRD_OVERVIEW_VERSION || '').trim();
