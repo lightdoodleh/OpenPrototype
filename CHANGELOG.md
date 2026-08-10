@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.2](https://github.com/lightdoodleh/OpenPrototype/compare/v1.8.1...v1.8.2) (2026-08-10)
+
+
+### Bug Fixes
+
+* display the last PRD version record as the current version ([15bd004](https://github.com/lightdoodleh/OpenPrototype/commit/15bd004))
+
 ## [1.8.1](https://github.com/lightdoodleh/OpenPrototype/compare/v1.8.0...v1.8.1) (2026-08-07)
 
 
