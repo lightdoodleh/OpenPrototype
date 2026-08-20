@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.2](https://github.com/lightdoodleh/OpenPrototype/compare/v1.8.1...v1.8.2) (2026-08-20)
+
+
+### Bug Fixes
+
+* reset review status after Agent edits ([#29](https://github.com/lightdoodleh/OpenPrototype/issues/29)) ([cf7f0ec](https://github.com/lightdoodleh/OpenPrototype/commit/cf7f0ec1ac1d1fc143c060d376ec0651b40fd4cc))
+
 ## [1.8.2](https://github.com/lightdoodleh/OpenPrototype/compare/v1.8.1...v1.8.2) (2026-08-10)
 
 
