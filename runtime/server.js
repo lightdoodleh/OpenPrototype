@@ -61,6 +61,7 @@ let openCodeProcess = null;
 let openCodeReadyPromise = null;
 let openCodeOwned = false;
 let openCodeStartError = '';
+const agentTaskSnapshots = new Map();
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -122,6 +123,73 @@ function resolveAgentWritablePath(inputPath, expectedExt) {
   const ok = AGENT_WRITE_ROOTS.some((root) => resolved === root || resolved.startsWith(root + path.sep));
   if (!ok) throw new Error('Agent 只能操作已注册产品的页面（见 proto-kit.config.json）');
   return resolved;
+}
+
+function findAgentWriteRoot(filePath) {
+  return AGENT_WRITE_ROOTS.find((root) => filePath === root || filePath.startsWith(root + path.sep)) || '';
+}
+
+function captureProductFiles(rootDir) {
+  const files = new Map();
+
+  function walk(dir) {
+    fs.readdirSync(dir, { withFileTypes: true }).forEach((entry) => {
+      if (entry.name.startsWith('.')) return;
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(file);
+        return;
+      }
+      if (!entry.isFile()) return;
+      const stat = fs.statSync(file);
+      const rel = path.relative(rootDir, file).split(path.sep).join('/');
+      files.set(rel, `${stat.size}:${stat.mtimeMs}`);
+    });
+  }
+
+  walk(rootDir);
+  return files;
+}
+
+function startAgentTaskSnapshot(sessionID, htmlFile, htmlPath, prdPath) {
+  const rootDir = findAgentWriteRoot(htmlFile);
+  if (!rootDir) throw new Error('无法确定 Agent 任务所属产品目录');
+  agentTaskSnapshots.set(sessionID, {
+    rootDir,
+    files: captureProductFiles(rootDir),
+    context: {
+      htmlPath: String(htmlPath || ''),
+      prdPath: String(prdPath || '')
+    },
+    startedAt: Date.now()
+  });
+
+  if (agentTaskSnapshots.size > 50) {
+    const oldest = [...agentTaskSnapshots.entries()]
+      .sort((a, b) => a[1].startedAt - b[1].startedAt)
+      .slice(0, agentTaskSnapshots.size - 50);
+    oldest.forEach(([id]) => agentTaskSnapshots.delete(id));
+  }
+}
+
+function consumeAgentTaskChanges(sessionID) {
+  const snapshot = agentTaskSnapshots.get(sessionID);
+  if (!snapshot) return { context: null, changes: [] };
+
+  const current = captureProductFiles(snapshot.rootDir);
+  const names = new Set([...snapshot.files.keys(), ...current.keys()]);
+  const changes = [];
+  names.forEach((name) => {
+    const before = snapshot.files.get(name);
+    const after = current.get(name);
+    if (before === after) return;
+    changes.push({
+      file: path.relative(ROOT_DIR, path.join(snapshot.rootDir, name)).split(path.sep).join('/'),
+      change: before === undefined ? 'created' : after === undefined ? 'deleted' : 'modified'
+    });
+  });
+  agentTaskSnapshots.delete(sessionID);
+  return { context: snapshot.context, changes };
 }
 
 function isLoopbackRequest(req) {
@@ -834,8 +902,14 @@ async function handleAgentApi(req, res, urlPath) {
       if (!message) throw new Error('消息不能为空');
       const htmlFile = resolveAgentWritablePath(data.htmlPath, '.html');
       const prdFile = data.prdPath ? resolveAgentWritablePath(data.prdPath, '.md') : '';
-      await ensureOpenCode();
-      await sendOpenCodeMessage(match[1], message, buildAgentSystemPrompt(htmlFile, prdFile));
+      startAgentTaskSnapshot(match[1], htmlFile, data.htmlPath, data.prdPath);
+      try {
+        await ensureOpenCode();
+        await sendOpenCodeMessage(match[1], message, buildAgentSystemPrompt(htmlFile, prdFile));
+      } catch (err) {
+        agentTaskSnapshots.delete(match[1]);
+        throw err;
+      }
       sendJson(res, 202, { ok: true });
       return true;
     }
@@ -860,6 +934,12 @@ async function handleAgentApi(req, res, urlPath) {
       await ensureOpenCode();
       const diff = await requestOpenCode('GET', `/session/${match[1]}/diff`);
       sendJson(res, 200, { ok: true, diff: diff || [] });
+      return true;
+    }
+
+    match = urlPath.match(/^\/api\/agent\/sessions\/(ses_[A-Za-z0-9]+)\/task-changes$/);
+    if (req.method === 'GET' && match) {
+      sendJson(res, 200, { ok: true, ...consumeAgentTaskChanges(match[1]) });
       return true;
     }
 
