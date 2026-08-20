@@ -23,7 +23,7 @@
           createdAt: Number(item.createdAt || Date.now()),
           running: false,
           unread: false,
-          taskContext: null
+          taskContext: item.taskContext && typeof item.taskContext === 'object' ? item.taskContext : null
         }));
       }
     } catch (err) {
@@ -83,6 +83,82 @@
   function basename(filePath) {
     const cleanPath = String(filePath || '').split('?')[0].split('#')[0];
     return decodeURIComponent(cleanPath.split('/').pop() || '');
+  }
+
+  function normalizedPath(filePath) {
+    return decodeURIComponent(String(filePath || ''))
+      .split('?')[0]
+      .split('#')[0]
+      .replace(/\\/g, '/')
+      .replace(/^\/+/, '');
+  }
+
+  function findPageRow(filePath) {
+    const file = normalizedPath(filePath);
+    return Array.from(document.querySelectorAll('.file-row[data-path]')).find(row => {
+      const rowPath = normalizedPath(row.dataset.path);
+      return file === rowPath || file.endsWith('/' + rowPath);
+    }) || null;
+  }
+
+  function markReviewPending(row, type) {
+    if (!row) return false;
+    const button = row.querySelector(`.review-btn[data-review-target="${type}"]`);
+    if (!button || button.getAttribute('aria-pressed') !== 'true') return false;
+    button.click();
+    return true;
+  }
+
+  function resetReviewsForChanges(changes, context) {
+    const changed = Array.isArray(changes) ? changes : [];
+    if (!changed.length) return 0;
+    const resetButtons = new Set();
+    const taskRow = findPageRow(context && context.htmlPath);
+
+    changed.forEach(item => {
+      const file = normalizedPath(item && (item.file || item.path));
+      if (!file || file.endsWith('/nav-tree.json') || file === 'nav-tree.json') return;
+
+      if (/\.md$/i.test(file)) {
+        const row = findPageRow(file.replace(/\.md$/i, '.html'));
+        if (row) resetButtons.add(`${row.dataset.path}|md`);
+        return;
+      }
+
+      if (/\.html$/i.test(file)) {
+        const row = findPageRow(file);
+        if (row) resetButtons.add(`${row.dataset.path}|html`);
+        return;
+      }
+
+      if (/\.js$/i.test(file)) {
+        const siblingRow = findPageRow(file.replace(/\.js$/i, '.html'));
+        if (siblingRow) {
+          resetButtons.add(`${siblingRow.dataset.path}|html`);
+          return;
+        }
+      }
+
+      if (taskRow) resetButtons.add(`${taskRow.dataset.path}|html`);
+    });
+
+    let resetCount = 0;
+    resetButtons.forEach(key => {
+      const separator = key.lastIndexOf('|');
+      const row = findPageRow(key.slice(0, separator));
+      if (markReviewPending(row, key.slice(separator + 1))) resetCount += 1;
+    });
+    return resetCount;
+  }
+
+  async function consumeTaskChanges(sessionId, context) {
+    if (!sessionId) return 0;
+    try {
+      const data = await api(`/api/agent/sessions/${sessionId}/task-changes`);
+      return resetReviewsForChanges(data.changes, data.context || context || {});
+    } catch (err) {
+      return 0;
+    }
   }
 
   function buildPanel() {
@@ -154,7 +230,8 @@
     const stored = state.threads.map(item => ({
       id: item.id,
       title: item.title,
-      createdAt: item.createdAt
+      createdAt: item.createdAt,
+      taskContext: item.taskContext || null
     }));
     agentStorage.setItem(THREADS_KEY, JSON.stringify(stored));
     if (state.sessionId) agentStorage.setItem(SESSION_KEY, state.sessionId);
@@ -220,6 +297,7 @@
           if (thread.id !== state.sessionId && data.status && data.status.type === 'idle') {
             thread.running = false;
             thread.unread = true;
+            await consumeTaskChanges(thread.id, thread.taskContext);
             reloadTaskPreview(thread.taskContext);
           }
         } catch (err) {
@@ -238,6 +316,7 @@
       try {
         const data = await api(`/api/agent/sessions/${thread.id}/status`);
         thread.running = Boolean(data.status && data.status.type !== 'idle');
+        if (!thread.running) await consumeTaskChanges(thread.id, thread.taskContext);
       } catch (err) {
         thread.running = false;
       }
@@ -677,9 +756,14 @@
     clearTimeout(state.statusPollTimer);
     state.statusPollTimer = null;
     setRunning(false);
-    await Promise.all([refreshHistory(), refreshPending(), refreshDiff()]);
+    const results = await Promise.all([
+      refreshHistory(),
+      refreshPending(),
+      refreshDiff(),
+      consumeTaskChanges(state.sessionId, state.taskContext)
+    ]);
     reloadTaskPreview();
-    setStatus('ready', '已完成，预览已刷新');
+    setStatus('ready', results[3] ? '已完成，预览已刷新；评审标记已重置' : '已完成，预览已刷新');
   }
 
   function handleEvent(event) {
@@ -693,6 +777,7 @@
       return;
     }
     if (type === 'session.error' || type === 'proxy.error') {
+      consumeTaskChanges(state.sessionId, state.taskContext);
       setRunning(false);
       setStatus('error', properties.message || 'OpenCode 执行失败');
       return;
@@ -758,7 +843,9 @@
       }
       connectEvents();
       const data = await api(`/api/agent/sessions/${state.sessionId}/status`);
-      setRunning(data.status && data.status.type !== 'idle');
+      const running = Boolean(data.status && data.status.type !== 'idle');
+      setRunning(running);
+      if (!running) await consumeTaskChanges(state.sessionId, state.taskContext);
       await Promise.all([refreshPending(), refreshDiff()]);
     } catch (err) {
       setStatus('error', `切换对话失败：${err.message}`);
@@ -783,7 +870,9 @@
     }
     connectEvents();
     const data = await api(`/api/agent/sessions/${state.sessionId}/status`);
-    setRunning(data.status && data.status.type !== 'idle');
+    const running = Boolean(data.status && data.status.type !== 'idle');
+    setRunning(running);
+    if (!running) await consumeTaskChanges(state.sessionId, state.taskContext);
     scheduleBackgroundStatusPoll();
   }
 
@@ -836,8 +925,11 @@
     try {
       await api(`/api/agent/sessions/${state.sessionId}/abort`, { method: 'POST' });
       setRunning(false);
-      setStatus('ready', '任务已停止');
-      await refreshHistory();
+      const results = await Promise.all([
+        refreshHistory(),
+        consumeTaskChanges(state.sessionId, state.taskContext)
+      ]);
+      setStatus('ready', results[1] ? '任务已停止；已修改内容的评审标记已重置' : '任务已停止');
     } catch (err) {
       setStatus('error', `停止失败：${err.message}`);
     }
