@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.4](https://github.com/lightdoodleh/OpenPrototype/compare/v1.8.3...v1.8.4) (2026-09-01)
+
+
+### Bug Fixes
+
+* **prd:** support parallel development versions ([c4d560b](https://github.com/lightdoodleh/OpenPrototype/commit/c4d560ba454501907f3d0afb149671f17e8f04e6))
+
 ## [1.8.3](https://github.com/lightdoodleh/OpenPrototype/compare/v1.8.2...v1.8.3) (2026-08-20)
 
 
