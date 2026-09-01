@@ -4,11 +4,21 @@
  */
 
 // 页面可在引入本模块前声明这些全局以覆盖默认行为；未声明时使用默认值。
+// 在直接引入 prd-panel.js 的旧页面中，同步补齐并行版本工具，保持向后兼容。
+if (typeof window !== 'undefined' && !window.OpenPrototypePrdVersions && document.currentScript) {
+    var prdPanelScriptSource = document.currentScript.getAttribute('src') || '';
+    var prdVersionUtilsSource = prdPanelScriptSource.replace(/prd-panel\.js(?:\?.*)?$/, 'prd-version-utils.js');
+    if (prdVersionUtilsSource) document.write('<script src="' + prdVersionUtilsSource + '"><\/script>');
+}
+
 // “当前版本”优先读取主 PRD 版本记录表的最后一条；PRD_OVERVIEW_VERSION 仅作兼容兜底。
 // PRD_WORKSPACE_MAP 配置多文档工作区。
 var PRD_BASE_PATH = typeof PRD_BASE_PATH !== 'undefined' ? PRD_BASE_PATH : './';
 var PRD_FILE_MAP = typeof PRD_FILE_MAP !== 'undefined' ? PRD_FILE_MAP : {};
 var PRD_CACHE = typeof PRD_CACHE !== 'undefined' ? PRD_CACHE : {};
+var PRD_DEVELOPMENT_VERSION_COLORS = typeof PRD_DEVELOPMENT_VERSION_COLORS !== 'undefined'
+    ? PRD_DEVELOPMENT_VERSION_COLORS
+    : {};
 
 var prdPanelInitialized = false;
 var prdPanelWidth = null;
@@ -341,6 +351,7 @@ var prdEditMode = false;
 var prdWorkspaceRootPath = '';
 var prdOverviewMarkdown = '';
 var prdOverviewVersion = '';
+var prdOverviewVersions = [];
 var prdOverviewBuildToken = 0;
 var PRD_OVERVIEW_PATH = './__openprototype_current_version__.md';
 
@@ -480,6 +491,9 @@ function escapePrdRegExp(text) {
 function containsPrdVersion(text, version) {
     var normalizedVersion = String(version || '').replace(/^v/i, '');
     if (!normalizedVersion) return false;
+    if (window.OpenPrototypePrdVersions) {
+        return window.OpenPrototypePrdVersions.contains(text, version);
+    }
     var pattern = '(^|[^0-9.])v?' + escapePrdRegExp(normalizedVersion) + '(?=$|[^0-9.])';
     return new RegExp(pattern, 'i').test(String(text || ''));
 }
@@ -552,53 +566,67 @@ function collectPrdVersionSections(content, version) {
     return sections;
 }
 
-function buildPrdOverviewMarkdown(tabs, contents, version) {
-    var documentSections = [];
-
-    tabs.forEach(function(tab, index) {
-        var sections = collectPrdVersionSections(contents[index], version);
-        if (sections.length) documentSections.push({ tab: tab, sections: sections });
-    });
-
-    if (!documentSections.length) return '';
-
+function buildPrdOverviewMarkdown(tabs, contents, versions) {
     var markdown = [
-        '# ' + version + ' 更新总览',
+        '# 当前开发版本更新总览',
         '',
-        '> 自动汇总当前页面工作区内各 PRD 中标注为 ' + version + ' 的修订说明与详细规则。',
+        '> 自动汇总当前页面工作区内所有带颜色标记的开发版本；版本颜色与各 PRD 的详细变更保持一致。',
         ''
     ];
+    var hasContent = false;
+    var colorConflicts = versions.filter(function(item) { return item.hasColorConflict; });
+    if (colorConflicts.length) {
+        markdown.push('> ⚠️ ' + colorConflicts.map(function(item) {
+            return item.version + ' 在多个 PRD 中存在颜色冲突，已按项目配置显示。';
+        }).join(' '), '');
+    }
 
-    documentSections.forEach(function(documentItem) {
-        var tab = documentItem.tab;
-        var documentTitle = tab.title === '主文档' ? getPrdDisplayName(tab.path) : tab.title;
-        markdown.push('## ' + documentTitle, '', '来源：`' + tab.path.split('/').pop() + '`', '');
+    versions.forEach(function(versionItem) {
+        var documentSections = [];
+        tabs.forEach(function(tab, index) {
+            var sections = collectPrdVersionSections(contents[index], versionItem.version);
+            if (sections.length) documentSections.push({ tab: tab, sections: sections });
+        });
+        if (!documentSections.length) return;
 
-        documentItem.sections.forEach(function(section) {
-            if (section.heading) markdown.push('### ' + section.heading, '');
-            markdown.push(section.markdown, '');
+        hasContent = true;
+        markdown.push('## <span style="color:' + versionItem.color + '">' + versionItem.version + '</span>', '');
+        documentSections.forEach(function(documentItem) {
+            var documentTitle = documentItem.tab.title === '主文档'
+                ? getPrdDisplayName(documentItem.tab.path)
+                : documentItem.tab.title;
+            markdown.push('### ' + documentTitle, '', '来源：`' + documentItem.tab.path.split('/').pop() + '`', '');
+            documentItem.sections.forEach(function(section) {
+                if (section.heading) markdown.push('#### ' + section.heading, '');
+                markdown.push(section.markdown, '');
+            });
         });
     });
 
-    return markdown.join('\n').trim();
+    return hasContent ? markdown.join('\n').trim() : '';
 }
 
 function renderPrdOverview() {
-    var version = prdOverviewVersion;
     var contentEl = document.getElementById('prdPanelContent');
     var titleEl = document.getElementById('prdPanelTitle');
     var fileNameEl = document.getElementById('prdPanelFileName');
     var editBtn = document.getElementById('prdPanelEditBtn');
     if (!contentEl || !prdOverviewMarkdown) return;
 
-    prdCurrentFileName = version + ' 当前版本';
+    var versionNames = prdOverviewVersions.map(function(item) { return item.version; });
+    prdCurrentFileName = versionNames.join(' / ') + ' 当前版本';
     prdCurrentPath = PRD_OVERVIEW_PATH;
     prdCurrentRawContent = prdOverviewMarkdown;
-    if (titleEl) titleEl.textContent = version + ' 更新总览 - PRD';
+    if (titleEl) titleEl.textContent = versionNames.join(' / ') + ' 更新总览 - PRD';
     if (fileNameEl) fileNameEl.textContent = '';
     if (editBtn) editBtn.style.display = 'none';
 
-    contentEl.innerHTML = renderMarkdownToHtml(prdOverviewMarkdown);
+    var renderedMarkdown = window.OpenPrototypePrdVersions
+        ? window.OpenPrototypePrdVersions.synchronizeHistoryColors(prdOverviewMarkdown, {
+            versionColors: PRD_DEVELOPMENT_VERSION_COLORS
+        })
+        : prdOverviewMarkdown;
+    contentEl.innerHTML = renderMarkdownToHtml(renderedMarkdown);
     wrapPrdTables(contentEl);
     renderPrdTabs(PRD_OVERVIEW_PATH);
     bindPrdTabs();
@@ -613,14 +641,10 @@ function preparePrdOverview(rootPath, options) {
     var contentOverrides = options.contentOverrides || {};
     var buildToken = ++prdOverviewBuildToken;
     var normalizedRootPath = normalizePrdPath(rootPath);
-    var rootContent = Object.prototype.hasOwnProperty.call(contentOverrides, normalizedRootPath)
-        ? contentOverrides[normalizedRootPath]
-        : '';
-    var version = getPrdOverviewVersion(rootContent);
-    prdOverviewVersion = version;
 
-    if (!version || !realTabs.length) {
+    if (!realTabs.length) {
         prdOverviewMarkdown = '';
+        prdOverviewVersions = [];
         prdWorkspaceTabs = realTabs;
         return Promise.resolve('');
     }
@@ -634,7 +658,23 @@ function preparePrdOverview(rootPath, options) {
     })).then(function(contents) {
         if (buildToken !== prdOverviewBuildToken) return '';
 
-        prdOverviewMarkdown = buildPrdOverviewMarkdown(realTabs, contents, version);
+        prdOverviewVersions = window.OpenPrototypePrdVersions
+            ? window.OpenPrototypePrdVersions.collectWorkspace(contents, {
+                versionColors: PRD_DEVELOPMENT_VERSION_COLORS
+            })
+            : [];
+        if (!prdOverviewVersions.length) {
+            var rootContentIndex = realTabs.findIndex(function(tab) {
+                return normalizePrdPath(tab.path) === normalizedRootPath;
+            });
+            var rootContent = rootContentIndex >= 0 ? contents[rootContentIndex] : '';
+            var fallbackVersion = getPrdHistoryLatestVersion(rootContent)
+                || (typeof PRD_OVERVIEW_VERSION === 'undefined' ? '' : String(PRD_OVERVIEW_VERSION || '').trim());
+            if (fallbackVersion) prdOverviewVersions = [{ version: fallbackVersion, color: 'inherit' }];
+        }
+
+        prdOverviewVersion = prdOverviewVersions.length ? prdOverviewVersions[0].version : '';
+        prdOverviewMarkdown = buildPrdOverviewMarkdown(realTabs, contents, prdOverviewVersions);
         prdWorkspaceTabs = prdOverviewMarkdown ? [{
             title: '当前版本',
             path: PRD_OVERVIEW_PATH
@@ -807,7 +847,12 @@ function renderLoadedPrd(result, options) {
     prdCurrentRawContent = result.content;
     var editBtn = document.getElementById('prdPanelEditBtn');
     if (editBtn && !prdEditMode) editBtn.style.display = '';
-    prdContentEl.innerHTML = renderMarkdownToHtml(result.content);
+    var renderedContent = window.OpenPrototypePrdVersions
+        ? window.OpenPrototypePrdVersions.synchronizeHistoryColors(result.content, {
+            versionColors: PRD_DEVELOPMENT_VERSION_COLORS
+        })
+        : result.content;
+    prdContentEl.innerHTML = renderMarkdownToHtml(renderedContent);
     wrapPrdTables(prdContentEl);
 
     if (options && options.resetWorkspace) {
@@ -887,6 +932,7 @@ function updatePrdContent() {
     prdWorkspaceRootPath = '';
     prdOverviewMarkdown = '';
     prdOverviewVersion = '';
+    prdOverviewVersions = [];
     
     if (!prdFileName) {
         prdContentEl.innerHTML = '<div class="error" style="padding:20px;color:var(--text-secondary);">当前页面暂无对应的PRD文档</div>';
