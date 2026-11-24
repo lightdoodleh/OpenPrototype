@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.5](https://github.com/lightdoodleh/OpenPrototype/compare/v1.8.4...v1.8.5) (2026-11-24)
+
+
+### Bug Fixes
+
+* **prd:** require a version prefix in colored content ([4429a75](https://github.com/lightdoodleh/OpenPrototype/commit/4429a759d3cbb9690e5e0e5aeb170246500190cf))
+
 ## [1.8.4](https://github.com/lightdoodleh/OpenPrototype/compare/v1.8.3...v1.8.4) (2026-09-01)
 
 
