@@ -65,10 +65,13 @@
         var positions = {};
         var match;
         while ((match = pattern.exec(content))) {
-            var version = extractVersion(match[2]);
+            // 正文用 V 前缀区分版本号和章节编号，版本表第一列仍兼容省略前缀的写法。
+            var versionMatch = stripHtml(match[2]).match(/\bV\d+(?:\.\d+)+\b/i);
+            if (!versionMatch) continue;
+            var version = versionMatch[0].toUpperCase();
             var color = String(match[1] || '').trim();
             var key = normalizeVersion(version);
-            if (!key || !/^[#(),.%\w\s-]+$/.test(color)) continue;
+            if (!/^[#(),.%\w\s-]+$/.test(color)) continue;
             if (!Object.prototype.hasOwnProperty.call(positions, key)) {
                 positions[key] = versions.length;
                 versions.push({ version: version, color: color });
