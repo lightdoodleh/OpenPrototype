@@ -153,15 +153,15 @@ jobs:
         run: |
           package_name=$(node -p "require('./package.json').name")
           package_version=$(node -p "require('./package.json').version")
-          for attempt in 1 2 3 4 5 6; do
-            published_version=$(npm view "$package_name@$package_version" version 2>/dev/null || true)
+          for attempt in {1..60}; do
+            published_version=$(npm view "$package_name@$package_version" version --prefer-online 2>/dev/null || true)
             if [ "$published_version" = "$package_version" ]; then
               echo "$package_name@$package_version 已发布"
               exit 0
             fi
             sleep 10
           done
-          echo "::error::npm 在 60 秒内仍无法读取 $package_name@$package_version"
+          echo "::error::npm 在 10 分钟内仍无法读取 $package_name@$package_version；请检查 npm 处理状态"
           exit 1
 
   recover-publish:
@@ -242,6 +242,10 @@ jobs:
             if [ "$publish_status" -eq 0 ]; then
               exit 0
             fi
+            if grep -q 'Cannot publish over previously staged version' "$publish_log"; then
+              echo "::error::$package_name@$package_version 正在 npm 暂存处理中，停止重复发布；请稍后检查"
+              exit 1
+            fi
             if npm view "$package_name@$package_version" version > /dev/null 2>&1; then
               echo "::notice::$package_name@$package_version 已出现在 npm，按补发成功处理"
               exit 0
@@ -260,13 +264,13 @@ jobs:
         run: |
           package_name=$(node -p "require('./package.json').name")
           package_version=$(node -p "require('./package.json').version")
-          for attempt in 1 2 3 4 5 6; do
-            published_version=$(npm view "$package_name@$package_version" version 2>/dev/null || true)
+          for attempt in {1..60}; do
+            published_version=$(npm view "$package_name@$package_version" version --prefer-online 2>/dev/null || true)
             if [ "$published_version" = "$package_version" ]; then
               echo "$package_name@$package_version 已自动补发"
               exit 0
             fi
             sleep 10
           done
-          echo "::error::npm 在 60 秒内仍无法读取 $package_name@$package_version"
+          echo "::error::npm 在 10 分钟内仍无法读取 $package_name@$package_version；请检查 npm 处理状态"
           exit 1
